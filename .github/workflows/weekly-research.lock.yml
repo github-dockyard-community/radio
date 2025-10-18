@@ -5,7 +5,7 @@
 #
 # Source: githubnext/agentics/workflows/weekly-research.md@049b826c4a2bb11aa8fd40648bc4a5956f432d1c
 #
-# Effective stop-time: 2025-10-13 03:38:53
+# Effective stop-time: 2025-11-17 03:46:41
 #
 # Job Dependency Graph:
 # ```mermaid
@@ -3827,7 +3827,7 @@ jobs:
         id: check_stop_time
         uses: actions/github-script@v8
         env:
-          GITHUB_AW_STOP_TIME: 2025-10-13 03:38:53
+          GITHUB_AW_STOP_TIME: 2025-11-17 03:46:41
           GITHUB_AW_WORKFLOW_NAME: "Weekly Research"
         with:
           script: |
