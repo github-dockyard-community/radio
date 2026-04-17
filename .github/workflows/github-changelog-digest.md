@@ -189,7 +189,7 @@ Radio配信のアジェンダです。
 
 ## GitHub Changelog
 
-GitHub Changelog の各記事をカテゴリに分けて整理しました。
+GitHub Changelogの各記事をカテゴリに分け、リアクション振りました。
 
 ## Copilot
 
