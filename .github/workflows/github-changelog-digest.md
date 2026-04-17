@@ -59,6 +59,7 @@ GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別�
 - GitHub から既存データを読む処理（Discussion の検索・取得）は、GitHub MCP の discussions toolset を使用してください。shell の `curl`、`gh api`、直接の HTTP リクエストで GitHub を読まないでください。
 - GitHub へ書き込む処理（Discussion の作成・更新）は safe-output のみを使用してください。shell の `curl`、`gh api`、直接の HTTP リクエストで GitHub を更新しないでください。
 - Discussion を作成または更新する段階では、最終応答として JSON テキストや疑似的な safe-output オブジェクトを本文出力してはいけません。実際の safe-output tool call として `create_discussion` または `update_discussion` を呼び出して完了してください。
+- safe-output tool call が成功したら、追加の JSON 本文や代替レスポンスを返さず、そのまま処理を完了してください。
 - 想定した safe-output を実行できない場合は、何も更新せずに成功扱いで終了してはいけません。必ず `missing_tool` または `noop` を呼び出して理由を残してください。
 
 ## 処理手順
@@ -222,6 +223,7 @@ GitHub Changelog の各記事をカテゴリに分けて整理しました。
 **記事総数**: XX件
 ```
 
+- `gh-changelog-digest` の tracker-id は既存 Discussion を再検出するための固定識別子です。毎回同じ値を本文に含めてください。
 - リアクション（📍👀🌇🔧）は各記事に割り当てないでください。記事リストは `- [タイトル](URL)` の形式のみで記載します
 - `**最終更新**` には現在の UTC 日時（`YYYY-MM-DD HH:MM UTC` 形式）を記載します
 - `**記事総数**` には対象期間の全記事数を記載します
