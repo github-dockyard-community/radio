@@ -54,6 +54,13 @@ GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別�
 
 これらの入力値は、この実行でユーザーが明示的に指定した値として扱ってください。`workflow_dispatch` のときは、現在の UTC 日時を使ってこれらの入力値を上書きしてはいけません。現在の UTC 日時を参照してよいのは、入力が空または `auto` の場合に補完が必要なときだけです。
 
+## ツール利用の原則
+
+- GitHub から既存データを読む処理（Discussion の検索・取得）は、GitHub MCP の discussions toolset を使用してください。shell の `curl`、`gh api`、直接の HTTP リクエストで GitHub を読まないでください。
+- GitHub へ書き込む処理（Discussion の作成・更新）は safe-output のみを使用してください。shell の `curl`、`gh api`、直接の HTTP リクエストで GitHub を更新しないでください。
+- Discussion を作成または更新する段階では、最終応答として JSON テキストや疑似的な safe-output オブジェクトを本文出力してはいけません。実際の safe-output tool call として `create_discussion` または `update_discussion` を呼び出して完了してください。
+- 想定した safe-output を実行できない場合は、何も更新せずに成功扱いで終了してはいけません。必ず `missing_tool` または `noop` を呼び出して理由を残してください。
+
 ## 処理手順
 
 ### 1. 対象期間の決定
@@ -109,12 +116,12 @@ GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別�
 GitHub Discussions を検索して、同一期間の Discussion が存在するか確認します。
 
 以下の条件で検索してください:
-- このリポジトリ内の全 Discussions を取得
+- GitHub MCP の discussions toolset を使って、このリポジトリ内の全 Discussions を取得
 - タイトルが `Radio YYYY.MM（前半/後半/月間） by GitHub Changelog Digest` に完全一致するものを探す
 - 本文に `gh-changelog-digest` が含まれているものを対象とする（tracker-id タグ）
 
-見つかった場合は既存 Discussion の番号を記録し、後の工程で `update-discussion` を使用します。
-見つからない場合は `create-discussion` を使用して新規作成します。
+見つかった場合は既存 Discussion の番号を記録し、後の工程で `discussion_number` を指定して `update_discussion` を使用します。
+見つからない場合は `create_discussion` を使用して新規作成します。
 
 ### 3. RSS フィードの取得とパース
 
@@ -166,20 +173,15 @@ https://github.blog/changelog/feed/
 ```markdown
 ## Radio YYYY.MM（前半/後半/月間）
 
+<!-- tracker-id: gh-changelog-digest -->
+
 Radio配信のアジェンダです。
 
 - 期間: YYYY.M.D-YYYY.M.D
 
-個人的判断により、以下のリアクションをつけています。
-
-- 📍: 配信でとりあげたい
-- 👀: 気になる
-- 🌇: サービスの終了、廃止など
-- 🔧: メンテナンス
-
 ## GitHub Changelog
 
-GitHub Changelogの各記事をカテゴリに分け、リアクション振りました。
+GitHub Changelog の各記事をカテゴリに分けて整理しました。
 
 ## Copilot
 
@@ -238,13 +240,19 @@ RSS フィードの取得に失敗しました。
 
 ### 7. Discussion の作成または更新
 
-**既存 Discussion が見つかった場合**: `update-discussion` safe-output を使用して本文を更新してください。
+**既存 Discussion が見つかった場合**: `discussion_number` を指定した `update_discussion` safe-output tool call を使用して本文を更新してください。JSON テキストを最終応答に出力してはいけません。
 
-**既存 Discussion が見つからない場合**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
+**既存 Discussion が見つからない場合**: `create_discussion` safe-output tool call を使用して新規作成してください。JSON テキストを最終応答に出力してはいけません。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
 
 - `Radio 2026.02（前半） by GitHub Changelog Digest`
 - `Radio 2026.02（後半） by GitHub Changelog Digest`
 - `Radio 2026.02（月間） by GitHub Changelog Digest`
+
+### 8. フォールバック
+
+- `create_discussion` または `update_discussion` を呼び出せない場合は、必ず `missing_tool` または `noop` を呼び出して終了してください。
+- 何も safe-output を呼び出さずに成功扱いで終了してはいけません。
+- `noop` を使う場合は、なぜ作成・更新しなかったのかが分かるメッセージを残してください。
 
 ## セキュリティ注意事項
 
