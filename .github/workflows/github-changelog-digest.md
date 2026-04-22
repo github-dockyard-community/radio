@@ -37,6 +37,7 @@ safe-outputs:
     category: "アジェンダ"
   update-discussion:
     max: 1
+    body: null
 ---
 
 # GitHub Changelog Digest
