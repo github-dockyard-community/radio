@@ -34,10 +34,12 @@ steps:
         exit 1
       fi
 
-      {
-        echo "GITHUB_TOKEN=${COPILOT_GITHUB_TOKEN}"
-        echo "GH_TOKEN=${COPILOT_GITHUB_TOKEN}"
-      } >> "$GITHUB_ENV"
+      # AWF runs the Copilot CLI in chroot mode (host filesystem).
+      # Env vars do not propagate across the chroot boundary, so setting
+      # GITHUB_TOKEN/GH_TOKEN via GITHUB_ENV has no effect inside the sandbox.
+      # Instead, authenticate the gh CLI on the host filesystem so the
+      # Copilot CLI can find credentials via its 'gh auth' fallback path.
+      echo "${COPILOT_GITHUB_TOKEN}" | gh auth login --with-token
 tools:
   github:
     toolsets: [discussions]
