@@ -22,7 +22,7 @@
 #
 # GitHub Changelog の RSS フィードを定期取得し、カテゴリ別に整理した月次ダイジェストを GitHub Discussions に自動投稿する
 #
-# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"59bb2d37c9e3ac3d67b98e1559d3e13721c5cfb6db52cdac6d3a4454ecf0733f","compiler_version":"v0.65.5","strict":true,"agent_id":"copilot"}
+# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"b03462f0d1e0ae720a05639d5b19405138e59576cd8ec9066447917df60e34aa","compiler_version":"v0.65.5","strict":true,"agent_id":"copilot"}
 
 name: "GitHub Changelog Digest"
 "on":
@@ -152,14 +152,14 @@ jobs:
         run: |
           bash ${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh
           {
-          cat << 'GH_AW_PROMPT_295a664f312dbcbb_EOF'
+          cat << 'GH_AW_PROMPT_60bd6b8f57b037c2_EOF'
           <system>
-          GH_AW_PROMPT_295a664f312dbcbb_EOF
+          GH_AW_PROMPT_60bd6b8f57b037c2_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_295a664f312dbcbb_EOF'
+          cat << 'GH_AW_PROMPT_60bd6b8f57b037c2_EOF'
           <safe-output-tools>
           Tools: create_discussion, update_discussion, missing_tool, missing_data, noop
           </safe-output-tools>
@@ -191,12 +191,12 @@ jobs:
           {{/if}}
           </github-context>
           
-          GH_AW_PROMPT_295a664f312dbcbb_EOF
+          GH_AW_PROMPT_60bd6b8f57b037c2_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_295a664f312dbcbb_EOF'
+          cat << 'GH_AW_PROMPT_60bd6b8f57b037c2_EOF'
           </system>
           {{#runtime-import .github/workflows/github-changelog-digest.md}}
-          GH_AW_PROMPT_295a664f312dbcbb_EOF
+          GH_AW_PROMPT_60bd6b8f57b037c2_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -317,7 +317,16 @@ jobs:
       - env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         name: Prepare Copilot auth env
-        run: "if [ -z \"${COPILOT_GITHUB_TOKEN}\" ]; then\n  echo \"COPILOT_GITHUB_TOKEN is not set\"\n  exit 1\nfi\n\n# AWF runs the Copilot CLI in chroot mode (host filesystem).\n# Env vars do not propagate across the chroot boundary, so setting\n# GITHUB_TOKEN/GH_TOKEN via GITHUB_ENV has no effect inside the sandbox.\n# Instead, authenticate the gh CLI on the host filesystem so the\n# Copilot CLI can find credentials via its 'gh auth' fallback path.\necho \"${COPILOT_GITHUB_TOKEN}\" | gh auth login --with-token\n"
+        run: |-
+          if [ -z "${COPILOT_GITHUB_TOKEN}" ]; then
+            echo "COPILOT_GITHUB_TOKEN is not set"
+            exit 1
+          fi
+
+          {
+            echo "GITHUB_TOKEN=${COPILOT_GITHUB_TOKEN}"
+            echo "GH_TOKEN=${COPILOT_GITHUB_TOKEN}"
+          } >> "$GITHUB_ENV"
 
       - name: Configure Git credentials
         env:
@@ -366,12 +375,12 @@ jobs:
           mkdir -p ${RUNNER_TEMP}/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/config.json << 'GH_AW_SAFE_OUTPUTS_CONFIG_6ffc8ca5ca97c8b1_EOF'
+          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/config.json << 'GH_AW_SAFE_OUTPUTS_CONFIG_cf7b71b8ca9714df_EOF'
           {"create_discussion":{"category":"アジェンダ","close_older_discussions":false,"expires":168,"fallback_to_issue":true,"max":1},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"update_discussion":{"max":1}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_6ffc8ca5ca97c8b1_EOF
+          GH_AW_SAFE_OUTPUTS_CONFIG_cf7b71b8ca9714df_EOF
       - name: Write Safe Outputs Tools
         run: |
-          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/tools_meta.json << 'GH_AW_SAFE_OUTPUTS_TOOLS_META_ffcb9983a7771bc2_EOF'
+          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/tools_meta.json << 'GH_AW_SAFE_OUTPUTS_TOOLS_META_3f09dc3131fc7858_EOF'
           {
             "description_suffixes": {
               "create_discussion": " CONSTRAINTS: Maximum 1 discussion(s) can be created. Discussions will be created in category \"アジェンダ\".",
@@ -380,8 +389,8 @@ jobs:
             "repo_params": {},
             "dynamic_tools": []
           }
-          GH_AW_SAFE_OUTPUTS_TOOLS_META_ffcb9983a7771bc2_EOF
-          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/validation.json << 'GH_AW_SAFE_OUTPUTS_VALIDATION_08b6d0faabb874ec_EOF'
+          GH_AW_SAFE_OUTPUTS_TOOLS_META_3f09dc3131fc7858_EOF
+          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/validation.json << 'GH_AW_SAFE_OUTPUTS_VALIDATION_3c202b47b308b96a_EOF'
           {
             "create_discussion": {
               "defaultMax": 1,
@@ -490,7 +499,7 @@ jobs:
               "customValidation": "requiresOneOf:title,body"
             }
           }
-          GH_AW_SAFE_OUTPUTS_VALIDATION_08b6d0faabb874ec_EOF
+          GH_AW_SAFE_OUTPUTS_VALIDATION_3c202b47b308b96a_EOF
           node ${RUNNER_TEMP}/gh-aw/actions/generate_safe_outputs_tools.cjs
       - name: Generate Safe Outputs MCP Server Config
         id: safe-outputs-config
@@ -558,7 +567,7 @@ jobs:
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host -v /var/run/docker.sock:/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_OUTPUTS_PORT -e GH_AW_SAFE_OUTPUTS_API_KEY -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.2.11'
           
           mkdir -p /home/runner/.copilot
-          cat << GH_AW_MCP_CONFIG_fa17bbb75b0504f7_EOF | bash ${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.sh
+          cat << GH_AW_MCP_CONFIG_7c31ed6a1f6dc1e5_EOF | bash ${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.sh
           {
             "mcpServers": {
               "github": {
@@ -599,7 +608,7 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_fa17bbb75b0504f7_EOF
+          GH_AW_MCP_CONFIG_7c31ed6a1f6dc1e5_EOF
       - name: Download activation artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
