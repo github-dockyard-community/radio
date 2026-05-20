@@ -24,20 +24,6 @@ permissions:
   contents: read
   actions: read
   discussions: read
-steps:
-  - name: Prepare Copilot auth env
-    env:
-      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-    run: |
-      if [ -z "${COPILOT_GITHUB_TOKEN}" ]; then
-        echo "COPILOT_GITHUB_TOKEN is not set"
-        exit 1
-      fi
-
-      {
-        echo "GITHUB_TOKEN=${COPILOT_GITHUB_TOKEN}"
-        echo "GH_TOKEN=${COPILOT_GITHUB_TOKEN}"
-      } >> "$GITHUB_ENV"
 tools:
   github:
     toolsets: [discussions]
