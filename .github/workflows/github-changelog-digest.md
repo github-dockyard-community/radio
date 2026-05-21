@@ -35,14 +35,17 @@ safe-outputs:
   create-discussion:
     close-older-discussions: false
     category: "アジェンダ"
-  update-discussion:
-    body: true
+  add-comment:
+    discussions: true
+    issues: false
+    pull-requests: false
+    target: "*"
     max: 1
 ---
 
 # GitHub Changelog Digest
 
-GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別に整理した月次ダイジェスト Discussion を作成・更新します。
+GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別に整理した月次ダイジェスト Discussion を作成し、再実行時は既存 Discussion に更新コメントを追加します。
 
 ## 実行コンテキスト
 
@@ -107,14 +110,14 @@ GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別�
 
 ### 2. 既存 Discussion の検索
 
-GitHub Discussions を検索して、同一期間の Discussion が存在するか確認します。
+GitHub Discussions を検索して、同一期間の未クローズ Discussion が存在するか確認します。
 
 以下の条件で検索してください:
-- このリポジトリ内の全 Discussions を取得
+- このリポジトリ内の未クローズ Discussions を取得
 - タイトルが `Radio YYYY.MM（前半/後半/月間） by GitHub Changelog Digest` に完全一致するものを探す
 - 本文に `gh-changelog-digest` が含まれているものを対象とする（tracker-id タグ）
 
-見つかった場合は既存 Discussion の番号を記録し、後の工程で `update-discussion` を使用します。
+見つかった場合は既存 Discussion の番号を記録し、後の工程でその Discussion に更新コメントを追加します。
 見つからない場合は `create-discussion` を使用して新規作成します。
 
 ### 3. RSS フィードの取得とパース
@@ -239,7 +242,7 @@ RSS フィードの取得に失敗しました。
 
 ### 7. Discussion の作成または更新
 
-**既存 Discussion が見つかった場合**: `update-discussion` safe-output を使用して本文を更新してください。
+**既存 Discussion が見つかった場合**: `add-comment` safe-output を使用して、その Discussion に更新版の本文をコメントとして追加してください。コメントの先頭に `> 更新版ダイジェスト` を置き、その後に手順 6 で生成した本文全体を続けてください。
 
 **既存 Discussion が見つからない場合**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
 
