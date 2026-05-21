@@ -35,17 +35,198 @@ safe-outputs:
   create-discussion:
     close-older-discussions: false
     category: "アジェンダ"
-  add-comment:
-    discussions: true
-    issues: false
-    pull-requests: false
-    target: "*"
-    max: 1
+  jobs:
+    refresh-discussion-body:
+      description: "既存 Discussion 本文に新着記事をマージして更新する"
+      runs-on: ubuntu-latest
+      output: "Discussion body updated"
+      inputs:
+        discussion_number:
+          description: "更新対象 Discussion の番号"
+          required: true
+          type: number
+        body:
+          description: "最新状態の本文"
+          required: true
+          type: string
+      permissions:
+        contents: read
+        discussions: write
+      env:
+        GH_TOKEN: ${{ github.token }}
+      steps:
+        - name: Merge discussion body
+          env:
+            REPO: ${{ github.repository }}
+          run: |
+            python - <<'PY'
+            import json
+            import os
+            import re
+            import subprocess
+            from collections import OrderedDict
+
+            CATEGORIES = [
+                "Copilot",
+                "Models",
+                "Project & Issues",
+                "Collaboration tools & Community engagement",
+                "Actions",
+                "Codespaces",
+                "Packages",
+                "Mobile",
+                "Client apps",
+                "Security",
+                "Administration & Enterprise",
+                "Ecosystem & Accessibility",
+                "Platform governance",
+                "Account management",
+                "Miscellaneous",
+            ]
+
+            LINK_RE = re.compile(r"^- \[(?P<title>[^\]]+)\]\((?P<url>[^)]+)\)(?P<suffix>.*)$")
+            FOOTER_RE = re.compile(r"\n(?:---\n)?<!-- gh-aw-[\s\S]*$", re.MULTILINE)
+
+            def load_item():
+                with open(os.environ["GH_AW_AGENT_OUTPUT"], encoding="utf-8") as f:
+                    payload = json.load(f)
+                for item in payload.get("items", []):
+                    if item.get("type") == "refresh_discussion_body":
+                        return item
+                raise SystemExit("refresh_discussion_body output not found")
+
+            def gh_graphql(query, **vars):
+                cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+                for key, value in vars.items():
+                    if isinstance(value, int):
+                        cmd.extend(["-F", f"{key}={value}"])
+                    else:
+                        cmd.extend(["-f", f"{key}={value}"])
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+                return json.loads(result.stdout)
+
+            def split_footer(body):
+                match = FOOTER_RE.search(body)
+                if not match:
+                    return body.rstrip(), ""
+                return body[: match.start()].rstrip(), body[match.start():].lstrip("\n")
+
+            def parse_sections(body):
+                sections = OrderedDict()
+                current = None
+                buf = []
+                for line in body.splitlines():
+                    if line.startswith("## "):
+                        heading = line[3:].strip()
+                        if current is not None:
+                            sections[current] = buf[:]
+                        current = heading
+                        buf = []
+                    else:
+                        if current is not None:
+                            buf.append(line)
+                if current is not None:
+                    sections[current] = buf[:]
+                return sections
+
+            def find_header_prefix(body):
+                marker = "## Copilot"
+                idx = body.find(marker)
+                return body[:idx].rstrip() if idx != -1 else body.rstrip()
+
+            def find_footer_block(body):
+                marker = "**対象期間**:"
+                idx = body.find(marker)
+                return body[idx:].strip() if idx != -1 else ""
+
+            def extract_links(lines):
+                ordered = []
+                by_url = {}
+                for line in lines:
+                    match = LINK_RE.match(line.strip())
+                    if not match:
+                        continue
+                    url = match.group("url")
+                    ordered.append(url)
+                    by_url[url] = line.strip()
+                return ordered, by_url
+
+            def merge_category(existing_lines, generated_lines):
+                existing_order, existing_by_url = extract_links(existing_lines)
+                generated_order, generated_by_url = extract_links(generated_lines)
+                ordered_urls = []
+                seen = set()
+                for url in generated_order + existing_order:
+                    if url not in seen:
+                        seen.add(url)
+                        ordered_urls.append(url)
+                merged = []
+                for url in ordered_urls:
+                    merged.append(existing_by_url.get(url, generated_by_url.get(url)))
+                return merged
+
+            def build_body(existing_body, generated_body):
+                existing_main, existing_footer = split_footer(existing_body)
+                generated_main, _ = split_footer(generated_body)
+                if "## Copilot" not in generated_main:
+                    merged_body = generated_main.strip()
+                    if existing_footer:
+                        merged_body = f"{merged_body}\n\n{existing_footer.strip()}"
+                    return merged_body.strip() + "\n"
+                existing_sections = parse_sections(existing_main)
+                generated_sections = parse_sections(generated_main)
+                header = find_header_prefix(generated_main)
+                footer_block = find_footer_block(generated_main)
+                parts = [header]
+                for category in CATEGORIES:
+                    parts.append(f"## {category}")
+                    merged_links = merge_category(
+                        existing_sections.get(category, []),
+                        generated_sections.get(category, []),
+                    )
+                    if merged_links:
+                        parts.extend([""] + merged_links)
+                    parts.append("")
+                if footer_block:
+                    parts.append(footer_block)
+                merged_body = "\n".join(part.rstrip() for part in parts if part is not None).strip()
+                if existing_footer:
+                    merged_body = f"{merged_body}\n\n{existing_footer.strip()}"
+                return merged_body.strip() + "\n"
+
+            item = load_item()
+            owner, repo = os.environ["REPO"].split("/", 1)
+            discussion_number = int(item["discussion_number"])
+            generated_body = item["body"]
+            query = """
+            query($owner:String!, $repo:String!, $number:Int!) {
+              repository(owner:$owner, name:$repo) {
+                discussion(number:$number) {
+                  id
+                  body
+                }
+              }
+            }
+            """
+            response = gh_graphql(query, owner=owner, repo=repo, number=discussion_number)
+            discussion = response["data"]["repository"]["discussion"]
+            merged_body = build_body(discussion["body"], generated_body)
+            mutation = """
+            mutation($discussionId:ID!, $body:String!) {
+              updateDiscussion(input:{discussionId:$discussionId, body:$body}) {
+                discussion {
+                  id
+                }
+              }
+            }
+            """
+            gh_graphql(mutation, discussionId=discussion["id"], body=merged_body)
+            PY
 ---
 
 # GitHub Changelog Digest
 
-GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別に整理した月次ダイジェスト Discussion を作成し、再実行時は既存 Discussion に更新コメントを追加します。
+GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別に整理した月次ダイジェスト Discussion を作成し、再実行時は既存 Discussion の本文に新着記事を追記更新します。
 
 ## 実行コンテキスト
 
@@ -117,7 +298,7 @@ GitHub Discussions を検索して、同一期間の未クローズ Discussion �
 - タイトルが `Radio YYYY.MM（前半/後半/月間） by GitHub Changelog Digest` に完全一致するものを探す
 - 本文に `gh-changelog-digest` が含まれているものを対象とする（tracker-id タグ）
 
-見つかった場合は既存 Discussion の番号を記録し、後の工程でその Discussion に更新コメントを追加します。
+見つかった場合は既存 Discussion の番号を記録し、後の工程でその Discussion の本文を更新します。
 見つからない場合は `create-discussion` を使用して新規作成します。
 
 ### 3. RSS フィードの取得とパース
@@ -242,7 +423,7 @@ RSS フィードの取得に失敗しました。
 
 ### 7. Discussion の作成または更新
 
-**既存 Discussion が見つかった場合**: `add-comment` safe-output を使用して、その Discussion に更新版の本文をコメントとして追加してください。コメントの先頭に `> 更新版ダイジェスト` を置き、その後に手順 6 で生成した本文全体を続けてください。
+**既存 Discussion が見つかった場合**: `refresh_discussion_body` safe-output を使用して本文を更新してください。入力には `discussion_number` と、手順 6 で生成した最新本文全体を `body` として渡してください。この safe-output は既存本文と新しい本文をマージし、既存記事リンクの末尾についているリアクション（例: ` 👀`）を保持したまま、新着記事リンクだけを追加します。
 
 **既存 Discussion が見つからない場合**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
 

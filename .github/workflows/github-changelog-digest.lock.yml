@@ -1,4 +1,4 @@
-# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"0ff76161020f6b879e69d52236224554e234db4466f2cf42d4448c2394db8be9","compiler_version":"v0.74.8","strict":true,"agent_id":"copilot"}
+# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"44e1ec30fadcbfefbb12c6563d6b4b04bc277d0ea2bd55c17fe0d8b6b240091f","compiler_version":"v0.74.8","strict":true,"agent_id":"copilot"}
 # gh-aw-manifest: {"version":1,"secrets":["COPILOT_GITHUB_TOKEN","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/checkout","sha":"de0fac2e4500dabe0009e67214ff5f5447ce83dd","version":"v6.0.2"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","version":"v6.4.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"efa55847f72aadb03490d955263ff911bf758700","version":"v0.74.8"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.25.49"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.25.49"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.25.49"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.3.9","digest":"sha256:64828b42a4482f58fab16509d7f8f495a6d97c972a98a68aff20543531ac0388","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.3.9@sha256:64828b42a4482f58fab16509d7f8f495a6d97c972a98a68aff20543531ac0388"},{"image":"ghcr.io/github/github-mcp-server:v1.0.4"},{"image":"node:lts-alpine","digest":"sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f","pinned_image":"node:lts-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f"}]}
 #    ___                   _   _      
 #   / _ \                 | | (_)     
@@ -201,20 +201,20 @@ jobs:
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh"
           {
-          cat << 'GH_AW_PROMPT_acdf04a5f04032a3_EOF'
+          cat << 'GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF'
           <system>
-          GH_AW_PROMPT_acdf04a5f04032a3_EOF
+          GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_acdf04a5f04032a3_EOF'
+          cat << 'GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF'
           <safe-output-tools>
-          Tools: add_comment, create_discussion, missing_tool, missing_data, noop
+          Tools: create_discussion, missing_tool, missing_data, noop, refresh_discussion_body
           </safe-output-tools>
-          GH_AW_PROMPT_acdf04a5f04032a3_EOF
+          GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/mcp_cli_tools_prompt.md"
-          cat << 'GH_AW_PROMPT_acdf04a5f04032a3_EOF'
+          cat << 'GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF'
           <github-context>
           The following GitHub context information is available for this workflow:
           {{#if github.actor}}
@@ -243,12 +243,12 @@ jobs:
           {{/if}}
           </github-context>
           
-          GH_AW_PROMPT_acdf04a5f04032a3_EOF
+          GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_acdf04a5f04032a3_EOF'
+          cat << 'GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF'
           </system>
           {{#runtime-import .github/workflows/github-changelog-digest.md}}
-          GH_AW_PROMPT_acdf04a5f04032a3_EOF
+          GH_AW_PROMPT_9ec34e1dc7ea0a13_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -461,44 +461,44 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/gh-aw/safeoutputs"
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_e6b6236d7a7b1165_EOF'
-          {"add_comment":{"max":1,"target":"*"},"create_discussion":{"category":"アジェンダ","close_older_discussions":false,"expires":168,"fallback_to_issue":true,"max":1},"create_report_incomplete_issue":{},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"report_incomplete":{}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_e6b6236d7a7b1165_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_0608e2d4b0805a40_EOF'
+          {"create_discussion":{"category":"アジェンダ","close_older_discussions":false,"expires":168,"fallback_to_issue":true,"max":1},"create_report_incomplete_issue":{},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"refresh-discussion-body":{"description":"既存 Discussion 本文に新着記事をマージして更新する","inputs":{"body":{"default":null,"description":"最新状態の本文","required":true,"type":"string"},"discussion_number":{"default":null,"description":"更新対象 Discussion の番号","required":true,"type":"number"}},"output":"Discussion body updated"},"report_incomplete":{}}
+          GH_AW_SAFE_OUTPUTS_CONFIG_0608e2d4b0805a40_EOF
       - name: Generate Safe Outputs Tools
         env:
           GH_AW_TOOLS_META_JSON: |
             {
               "description_suffixes": {
-                "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added. Target: *. Supports reply_to_id for discussion threading.",
                 "create_discussion": " CONSTRAINTS: Maximum 1 discussion(s) can be created. Discussions will be created in category \"アジェンダ\"."
               },
               "repo_params": {},
-              "dynamic_tools": []
+              "dynamic_tools": [
+                {
+                  "description": "既存 Discussion 本文に新着記事をマージして更新する",
+                  "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "body": {
+                        "description": "最新状態の本文",
+                        "type": "string"
+                      },
+                      "discussion_number": {
+                        "description": "更新対象 Discussion の番号",
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "body",
+                      "discussion_number"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "refresh_discussion_body"
+                }
+              ]
             }
           GH_AW_VALIDATION_JSON: |
             {
-              "add_comment": {
-                "defaultMax": 1,
-                "fields": {
-                  "body": {
-                    "required": true,
-                    "type": "string",
-                    "sanitize": true,
-                    "maxLength": 65000
-                  },
-                  "item_number": {
-                    "issueOrPRNumber": true
-                  },
-                  "reply_to_id": {
-                    "type": "string",
-                    "maxLength": 256
-                  },
-                  "repo": {
-                    "type": "string",
-                    "maxLength": 256
-                  }
-                }
-              },
               "create_discussion": {
                 "defaultMax": 1,
                 "fields": {
@@ -684,7 +684,7 @@ jobs:
           
           mkdir -p /home/runner/.copilot
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_82eb288d40944f81_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_248020f06267dccd_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
               "github": {
@@ -725,7 +725,7 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_82eb288d40944f81_EOF
+          GH_AW_MCP_CONFIG_248020f06267dccd_EOF
       - name: Mount MCP servers as CLIs
         id: mount-mcp-clis
         continue-on-error: true
@@ -957,6 +957,7 @@ jobs:
       - activation
       - agent
       - detection
+      - refresh_discussion_body
       - safe_outputs
     if: >
       always() && (needs.agent.result != 'skipped' || needs.activation.outputs.lockdown_check_failed == 'true' ||
@@ -1309,6 +1310,193 @@ jobs:
               }
             }
 
+  refresh_discussion_body:
+    needs:
+      - agent
+      - detection
+    if: >
+      (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'refresh_discussion_body')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      discussions: write
+    steps:
+      - name: Download agent output artifact
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: agent
+          path: ${{ runner.temp }}/gh-aw/safe-jobs/
+      - name: Merge discussion body
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          from collections import OrderedDict
+
+          CATEGORIES = [
+              "Copilot",
+              "Models",
+              "Project & Issues",
+              "Collaboration tools & Community engagement",
+              "Actions",
+              "Codespaces",
+              "Packages",
+              "Mobile",
+              "Client apps",
+              "Security",
+              "Administration & Enterprise",
+              "Ecosystem & Accessibility",
+              "Platform governance",
+              "Account management",
+              "Miscellaneous",
+          ]
+
+          LINK_RE = re.compile(r"^- \[(?P<title>[^\]]+)\]\((?P<url>[^)]+)\)(?P<suffix>.*)$")
+          FOOTER_RE = re.compile(r"\n(?:---\n)?<!-- gh-aw-[\s\S]*$", re.MULTILINE)
+
+          def load_item():
+              with open(os.environ["GH_AW_AGENT_OUTPUT"], encoding="utf-8") as f:
+                  payload = json.load(f)
+              for item in payload.get("items", []):
+                  if item.get("type") == "refresh_discussion_body":
+                      return item
+              raise SystemExit("refresh_discussion_body output not found")
+
+          def gh_graphql(query, **vars):
+              cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+              for key, value in vars.items():
+                  if isinstance(value, int):
+                      cmd.extend(["-F", f"{key}={value}"])
+                  else:
+                      cmd.extend(["-f", f"{key}={value}"])
+              result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+              return json.loads(result.stdout)
+
+          def split_footer(body):
+              match = FOOTER_RE.search(body)
+              if not match:
+                  return body.rstrip(), ""
+              return body[: match.start()].rstrip(), body[match.start():].lstrip("\n")
+
+          def parse_sections(body):
+              sections = OrderedDict()
+              current = None
+              buf = []
+              for line in body.splitlines():
+                  if line.startswith("## "):
+                      heading = line[3:].strip()
+                      if current is not None:
+                          sections[current] = buf[:]
+                      current = heading
+                      buf = []
+                  else:
+                      if current is not None:
+                          buf.append(line)
+              if current is not None:
+                  sections[current] = buf[:]
+              return sections
+
+          def find_header_prefix(body):
+              marker = "## Copilot"
+              idx = body.find(marker)
+              return body[:idx].rstrip() if idx != -1 else body.rstrip()
+
+          def find_footer_block(body):
+              marker = "**対象期間**:"
+              idx = body.find(marker)
+              return body[idx:].strip() if idx != -1 else ""
+
+          def extract_links(lines):
+              ordered = []
+              by_url = {}
+              for line in lines:
+                  match = LINK_RE.match(line.strip())
+                  if not match:
+                      continue
+                  url = match.group("url")
+                  ordered.append(url)
+                  by_url[url] = line.strip()
+              return ordered, by_url
+
+          def merge_category(existing_lines, generated_lines):
+              existing_order, existing_by_url = extract_links(existing_lines)
+              generated_order, generated_by_url = extract_links(generated_lines)
+              ordered_urls = []
+              seen = set()
+              for url in generated_order + existing_order:
+                  if url not in seen:
+                      seen.add(url)
+                      ordered_urls.append(url)
+              merged = []
+              for url in ordered_urls:
+                  merged.append(existing_by_url.get(url, generated_by_url.get(url)))
+              return merged
+
+          def build_body(existing_body, generated_body):
+              existing_main, existing_footer = split_footer(existing_body)
+              generated_main, _ = split_footer(generated_body)
+              if "## Copilot" not in generated_main:
+                  merged_body = generated_main.strip()
+                  if existing_footer:
+                      merged_body = f"{merged_body}\n\n{existing_footer.strip()}"
+                  return merged_body.strip() + "\n"
+              existing_sections = parse_sections(existing_main)
+              generated_sections = parse_sections(generated_main)
+              header = find_header_prefix(generated_main)
+              footer_block = find_footer_block(generated_main)
+              parts = [header]
+              for category in CATEGORIES:
+                  parts.append(f"## {category}")
+                  merged_links = merge_category(
+                      existing_sections.get(category, []),
+                      generated_sections.get(category, []),
+                  )
+                  if merged_links:
+                      parts.extend([""] + merged_links)
+                  parts.append("")
+              if footer_block:
+                  parts.append(footer_block)
+              merged_body = "\n".join(part.rstrip() for part in parts if part is not None).strip()
+              if existing_footer:
+                  merged_body = f"{merged_body}\n\n{existing_footer.strip()}"
+              return merged_body.strip() + "\n"
+
+          item = load_item()
+          owner, repo = os.environ["REPO"].split("/", 1)
+          discussion_number = int(item["discussion_number"])
+          generated_body = item["body"]
+          query = """
+          query($owner:String!, $repo:String!, $number:Int!) {
+            repository(owner:$owner, name:$repo) {
+              discussion(number:$number) {
+                id
+                body
+              }
+            }
+          }
+          """
+          response = gh_graphql(query, owner=owner, repo=repo, number=discussion_number)
+          discussion = response["data"]["repository"]["discussion"]
+          merged_body = build_body(discussion["body"], generated_body)
+          mutation = """
+          mutation($discussionId:ID!, $body:String!) {
+            updateDiscussion(input:{discussionId:$discussionId, body:$body}) {
+              discussion {
+                id
+              }
+            }
+          }
+          """
+          gh_graphql(mutation, discussionId=discussion["id"], body=merged_body)
+          PY
+        env:
+          GH_AW_AGENT_OUTPUT: ${{ runner.temp }}/gh-aw/safe-jobs/agent_output.json
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+
   safe_outputs:
     needs:
       - activation
@@ -1335,8 +1523,6 @@ jobs:
     outputs:
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}
-      comment_id: ${{ steps.process_safe_outputs.outputs.comment_id }}
-      comment_url: ${{ steps.process_safe_outputs.outputs.comment_url }}
       create_discussion_error_count: ${{ steps.process_safe_outputs.outputs.create_discussion_error_count }}
       create_discussion_errors: ${{ steps.process_safe_outputs.outputs.create_discussion_errors }}
       process_safe_outputs_processed_count: ${{ steps.process_safe_outputs.outputs.processed_count }}
@@ -1387,7 +1573,8 @@ jobs:
           GH_AW_ALLOWED_DOMAINS: "api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,github.blog,github.com,host.docker.internal,raw.githubusercontent.com,registry.npmjs.org,telemetry.enterprise.githubcopilot.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"max\":1,\"target\":\"*\"},\"create_discussion\":{\"category\":\"アジェンダ\",\"close_older_discussions\":false,\"expires\":168,\"fallback_to_issue\":true,\"max\":1},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"true\"},\"report_incomplete\":{}}"
+          GH_AW_SAFE_OUTPUT_JOBS: "{\"refresh_discussion_body\":\"\"}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_discussion\":{\"category\":\"アジェンダ\",\"close_older_discussions\":false,\"expires\":168,\"fallback_to_issue\":true,\"max\":1},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"true\"},\"report_incomplete\":{}}"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
