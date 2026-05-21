@@ -162,7 +162,9 @@ safe-outputs:
                         ordered_urls.append(url)
                 merged = []
                 for url in ordered_urls:
-                    merged.append(existing_by_url.get(url, generated_by_url.get(url)))
+                    line = existing_by_url.get(url, generated_by_url.get(url))
+                    if line:
+                        merged.append(line)
                 return merged
 
             def build_body(existing_body, generated_body):
@@ -197,7 +199,9 @@ safe-outputs:
             item = load_item()
             repo_value = os.environ.get("REPO", "")
             if repo_value.count("/") != 1:
-                raise SystemExit(f"invalid REPO value: {repo_value!r}")
+                raise SystemExit(
+                    f"invalid REPO value {repo_value!r}; expected 'owner/repo' format"
+                )
             owner, repo = repo_value.split("/", 1)
             discussion_number = int(item["discussion_number"])
             generated_body = item["body"]
