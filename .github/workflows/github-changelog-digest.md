@@ -116,13 +116,19 @@ GitHub Discussions を検索して、同一期間の Discussion が存在する�
 見つかった場合は既存 Discussion の番号を記録し、後の工程で `update-discussion` を使用します。
 見つからない場合は `create-discussion` を使用して新規作成します。
 
-### 3. RSS フィードの取得とパース
+### 3. RSS フィードの取得
 
-`web-fetch` ツールで以下の URL から RSS フィードを取得します:
+GitHub Changelog の RSS は最新分のみが含まれる場合があるため、対象期間を十分にカバーできるように**複数ページ**を取得してください。`web-fetch` ツールで以下を順に取得します。
 
-```
-https://github.blog/changelog/feed/
-```
+1. `https://github.blog/changelog/feed/`
+2. `https://github.blog/changelog/feed/?paged=2`, `?paged=3` ... を順次取得
+3. `?paged=` 形式が機能しない場合（HTTP エラー、`<item>` が 0 件、または前ページと同一内容が続く場合）は `https://github.blog/changelog/page/2/feed/`, `/page/3/feed/` ... を試す
+
+取得は以下の停止条件まで続けてください。
+- 手順 1 で確定した対象期間の開始日（`START_DATE`）より、直近ページの最古 `pubDate` が古くなった
+- または最大 12 ページ取得した
+
+各ページの `<item>` を結合し、`link` をキーに重複除去します。
 
 取得に失敗した場合（HTTP エラー等）:
 - エラー内容（HTTP ステータスコード、エラーメッセージ）を記録し、Discussion 本文にエラー情報を記載します
@@ -130,7 +136,7 @@ https://github.blog/changelog/feed/
 
 ### 4. RSS 記事のフィルタリング
 
-取得した RSS フィードから以下を抽出します:
+結合後の RSS 記事から以下を抽出します:
 - タイトル（`<title>`）
 - リンク（`<link>`）
 - 公開日（`<pubDate>`）
