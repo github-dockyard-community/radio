@@ -39,7 +39,7 @@ safe-outputs:
     refresh-discussion-body:
       description: "既存 Discussion 本文に新着記事をマージして更新する"
       runs-on: ubuntu-latest
-      output: "Discussion body updated"
+      output: "discussion_body_updated"
       inputs:
         discussion_number:
           description: "更新対象 Discussion の番号"
