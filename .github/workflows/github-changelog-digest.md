@@ -195,7 +195,10 @@ safe-outputs:
                 return merged_body.strip() + "\n"
 
             item = load_item()
-            owner, repo = os.environ["REPO"].split("/", 1)
+            repo_value = os.environ.get("REPO", "")
+            if repo_value.count("/") != 1:
+                raise SystemExit(f"invalid REPO value: {repo_value!r}")
+            owner, repo = repo_value.split("/", 1)
             discussion_number = int(item["discussion_number"])
             generated_body = item["body"]
             query = """
