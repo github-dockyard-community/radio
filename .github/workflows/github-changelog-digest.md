@@ -36,6 +36,7 @@ safe-outputs:
     close-older-discussions: false
     category: "アジェンダ"
   update-discussion:
+    body:
     max: 1
 ---
 
