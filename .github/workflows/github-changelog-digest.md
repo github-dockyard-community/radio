@@ -34,6 +34,7 @@ network:
 safe-outputs:
   create-discussion:
     close-older-discussions: false
+    expires: false
     category: "アジェンダ"
   update-discussion:
     body:
