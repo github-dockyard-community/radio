@@ -2,8 +2,8 @@
 description: GitHub Changelog の RSS フィードを定期取得し、カテゴリ別に整理した月次ダイジェストを GitHub Discussions に自動投稿する
 on:
   schedule:
-    - cron: "0 9 13,14,15 * *"      # 前半ダイジェスト: 13〜15日 UTC 9:00
-    - cron: "0 9 28,29,30,31 * *"   # 後半ダイジェスト: 28〜31日 UTC 9:00
+    - cron: "0 9 16 * *"   # 前半ダイジェスト: 毎月16日 UTC 9:00
+    - cron: "0 9 1 * *"    # 後半ダイジェスト: 毎月1日 UTC 9:00
   workflow_dispatch:
     inputs:
       period:
