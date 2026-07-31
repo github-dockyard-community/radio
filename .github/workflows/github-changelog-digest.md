@@ -246,7 +246,7 @@ RSS フィードの取得に失敗しました。
 
 ### 7. Discussion の作成または更新
 
-**既存 Discussion が見つかった場合**: `update-discussion` safe-output を使用して本文を更新してください。
+**既存 Discussion が見つかった場合**: `update-discussion` safe-output を使用して**本文のみ**を更新してください。タイトルは変更しないでください（`title` フィールドは指定しないこと）。
 
 **既存 Discussion が見つからない場合**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
 
