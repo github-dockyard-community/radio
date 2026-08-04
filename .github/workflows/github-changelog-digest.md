@@ -102,9 +102,9 @@ GitHub Changelog の RSS フィードから記事を取得し、カテゴリ別�
 - 月全体: `YYYY-MM-01` 〜 `YYYY-MM-{末日}` （末日は `date -d "YYYY-MM-01 +1 month -1 day" +%d` で取得）
 
 タイトルを構築します:
-- 前半: `Radio YYYY.MM（前半） by GitHub Changelog Digest`
-- 後半: `Radio YYYY.MM（後半） by GitHub Changelog Digest`
-- 月全体: `Radio YYYY.MM（月間） by GitHub Changelog Digest`
+- 前半: `Radio YYYY.MM(前半) by GitHub Changelog Digest`
+- 後半: `Radio YYYY.MM(後半) by GitHub Changelog Digest`
+- 月全体: `Radio YYYY.MM(月間) by GitHub Changelog Digest`
 
 ### 2. 既存 Discussion の検索
 
@@ -112,7 +112,7 @@ GitHub Discussions を検索して、同一期間の Discussion が存在する�
 
 以下の条件で検索してください:
 - このリポジトリ内の全 Discussions を取得
-- タイトルが `Radio YYYY.MM（前半/後半/月間） by GitHub Changelog Digest` に完全一致するものを探す
+- タイトルが `Radio YYYY.MM(前半/後半/月間) by GitHub Changelog Digest` に完全一致するものを探す
 - 本文に `gh-changelog-digest` が含まれているものを対象とする（tracker-id タグ）
 
 見つかった場合は既存 Discussion の番号を記録し、後の工程で `update-discussion` を使用します。また、その Discussion の本文を取得し、各記事リンクに付いているリアクションを抽出して「リアクション対応表」を作成してください。
@@ -183,7 +183,7 @@ GitHub Changelog の RSS は最新分のみが含まれる場合があるため�
 以下のフォーマットに従って本文を生成します。記事が1件もないカテゴリのセクションも出力しますが、記事リストは空のままにします。各カテゴリ内の記事は公開日昇順（古い→新しい）で並べます。
 
 ```markdown
-## Radio YYYY.MM（前半/後半/月間）
+## Radio YYYY.MM(前半/後半/月間)
 
 Radio配信のアジェンダです。
 
@@ -263,9 +263,9 @@ RSS フィードの取得に失敗しました。
 
 **既存 Discussion が見つからない場合**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
 
-- `Radio 2026.02（前半） by GitHub Changelog Digest`
-- `Radio 2026.02（後半） by GitHub Changelog Digest`
-- `Radio 2026.02（月間） by GitHub Changelog Digest`
+- `Radio 2026.02(前半) by GitHub Changelog Digest`
+- `Radio 2026.02(後半) by GitHub Changelog Digest`
+- `Radio 2026.02(月間) by GitHub Changelog Digest`
 
 ## セキュリティ注意事項
 
