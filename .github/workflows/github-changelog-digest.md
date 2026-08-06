@@ -115,7 +115,15 @@ GitHub Discussions を検索して、同一期間の Discussion が存在する�
 - タイトルが `Radio YYYY.MM(前半/後半/月間) by GitHub Changelog Digest` に完全一致するものを探す
 - 本文に `gh-changelog-digest` が含まれているものを対象とする（tracker-id タグ）
 
-見つかった場合は既存 Discussion の番号を記録し、後の工程で `update-discussion` を使用します。また、その Discussion の本文を取得し、各記事リンクに付いているリアクションを抽出して「リアクション対応表」を作成してください。
+検索結果の扱いを次のように固定してください（この順序で判定）:
+1. 一致候補が 0 件なら、新規作成対象とする
+2. 一致候補が 1 件以上なら、**必ず更新対象を 1 件に確定**し、その `discussion_number` を記録する
+3. 更新対象の選定は次の優先順位で行う
+   - `closed: false` を優先
+   - その中で `updated_at` が最新の 1 件を採用
+4. 上記で 1 件に確定できない場合（同順位で決められない、必要情報欠落など）は**曖昧状態として失敗**し、`create-discussion` にフォールバックしない
+
+一致候補が 1 件以上ある場合は、確定した `discussion_number` を使って後の工程で `update-discussion` を使用します。また、その Discussion の本文を取得し、各記事リンクに付いているリアクションを抽出して「リアクション対応表」を作成してください。
 
 **リアクション抽出の手順**:
 - 本文の各行を走査し、`- [任意のテキスト](URL)` の形式で始まる行を探す
@@ -127,7 +135,7 @@ GitHub Discussions を検索して、同一期間の Discussion が存在する�
 - `- [タイトル](https://github.blog/changelog/2026-07-16-xxx) 📍` → URL `https://github.blog/changelog/2026-07-16-xxx` にリアクション `📍` を記録
 - `- [タイトル](https://github.blog/changelog/2026-07-17-yyy)👀🌇` → URL `https://github.blog/changelog/2026-07-17-yyy` にリアクション `👀🌇` を記録（スペースなしも許容）
 
-見つからない場合は `create-discussion` を使用して新規作成します。
+一致候補が 0 件の場合のみ `create-discussion` を使用して新規作成します。
 
 ### 3. RSS フィードの取得
 
@@ -259,13 +267,22 @@ RSS フィードの取得に失敗しました。
 
 ### 7. Discussion の作成または更新
 
-**既存 Discussion が見つかった場合**: `update-discussion` safe-output を使用して**本文のみ**を更新してください。タイトルは変更しないでください（`title` フィールドは指定しないこと）。
+**手順 2 で `discussion_number` が確定している場合**: `update-discussion` safe-output を使用して**本文のみ**を更新してください。`discussion_number` は必須です。タイトルは変更しないでください（`title` フィールドは指定しないこと）。
 
-**既存 Discussion が見つからない場合**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
+**手順 2 の一致候補が 0 件の場合のみ**: `create-discussion` safe-output を使用して新規作成してください。タイトルには手順 1 で構築した完全なタイトルを指定してください。例:
 
 - `Radio 2026.02(前半) by GitHub Changelog Digest`
 - `Radio 2026.02(後半) by GitHub Changelog Digest`
 - `Radio 2026.02(月間) by GitHub Changelog Digest`
+
+制約:
+- `discussion_number` を確定した実行では `create-discussion` を出力してはいけません
+- `discussion_number` 未確定かつ一致候補が 0 件でない実行では、`update-discussion` / `create-discussion` のどちらも出力せず失敗扱いにしてください
+- `update-discussion` と `create-discussion` の同時出力は禁止です（エラー扱い）
+
+### 8. 運用時の即効確認
+
+更新を優先したい場合は、対象タイトルに対する Discussion を 1 件に整理したうえで実行してください。実行後は Actions ログ（`safe_outputs` ジョブ）で `Processing ... update_discussion` が出ていることを確認してください。
 
 ## セキュリティ注意事項
 
