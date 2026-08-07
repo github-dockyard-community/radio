@@ -26,7 +26,7 @@ permissions:
   discussions: read
 tools:
   github:
-    toolsets: [discussions]
+    toolsets: [discussions, repos]
   web-fetch:
 network:
   allowed:
