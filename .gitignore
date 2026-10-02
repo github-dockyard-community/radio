@@ -1,0 +1,13 @@
+# Local changelog data cache (kept locally, not committed to avoid copyright/licensing issues)
+data/*
+!data/.gitkeep
+
+# Temporary task files for Copilot translation
+.tasks/
+.github/extensions/changelog-reader/.tasks/
+
+# Node.js & OS
+node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db

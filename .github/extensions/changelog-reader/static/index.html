@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Changelog 対訳リーダー</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">📻</span>
+      <div class="brand-content">
+        <span class="brand-title">GitHub Changelog 対訳リーダー</span>
+        <select id="period-selector" class="period-select" title="表示期間・年月の切り替え">
+          <option value="recent" selected>最新（前月15日〜現在）</option>
+          <option value="all-time">全期間（全データ）</option>
+          <optgroup label="月別アーカイブ" id="month-optgroup">
+            <!-- Populated dynamically -->
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <!-- Navigation & Counter -->
+    <div class="header-controls">
+      <div class="nav-btn-group">
+        <button class="btn-icon" id="btn-prev" title="前の記事 (← / K)">
+          <span>◀</span><span>前へ</span>
+        </button>
+        <span class="nav-counter" id="nav-counter">1 / --</span>
+        <button class="btn-icon" id="btn-next" title="次の記事 (→ / J)">
+          <span>次へ</span><span>▶</span>
+        </button>
+      </div>
+
+      <!-- View Modes -->
+      <div class="view-modes">
+        <button class="mode-btn active" data-mode="side" title="左右対称の対訳 (1)">左右対訳</button>
+        <button class="mode-btn" data-mode="interleaved" title="段落ごとの交互表示 (2)">段落交互</button>
+        <button class="mode-btn" data-mode="ja" title="日本語のみ (3)">日本語</button>
+        <button class="mode-btn" data-mode="en" title="英語原文のみ (4)">原文(EN)</button>
+      </div>
+
+      <!-- Quick Tools -->
+      <button class="tool-btn" id="btn-sidebar-toggle" title="サイドバー開閉">☰ 一覧</button>
+      <div class="help-popover-wrapper">
+        <button class="tool-btn icon-btn" id="btn-help-toggle" title="キーボードショートカット一覧 ( ? )" aria-label="ヘルプ">？</button>
+        <div class="help-tooltip-card" id="help-tooltip-card">
+          <div class="help-tooltip-header">
+            <span class="help-title">⌨️ キーボードショートカット</span>
+          </div>
+          <div class="help-shortcuts-grid">
+            <div class="shortcut-item">
+              <span class="shortcut-label">次の記事</span>
+              <span class="shortcut-keys"><span class="kb-key">L</span> / <span class="kb-key">D</span> / <span class="kb-key">→</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">前の記事</span>
+              <span class="shortcut-keys"><span class="kb-key">H</span> / <span class="kb-key">A</span> / <span class="kb-key">←</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">次の段落（下へ）</span>
+              <span class="shortcut-keys"><span class="kb-key">J</span> / <span class="kb-key">S</span> / <span class="kb-key">↓</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">前の段落（上へ）</span>
+              <span class="shortcut-keys"><span class="kb-key">K</span> / <span class="kb-key">W</span> / <span class="kb-key">↑</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">AI翻訳を生成</span>
+              <span class="shortcut-keys"><span class="kb-key">T</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">左右対訳モード</span>
+              <span class="shortcut-keys"><span class="kb-key">1</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">段落交互モード</span>
+              <span class="shortcut-keys"><span class="kb-key">2</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">日本語のみ</span>
+              <span class="shortcut-keys"><span class="kb-key">3</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">原文(EN)のみ</span>
+              <span class="shortcut-keys"><span class="kb-key">4</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">記事内検索</span>
+              <span class="shortcut-keys"><span class="kb-key">/</span></span>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">検索解除 / 閉じる</span>
+              <span class="shortcut-keys"><span class="kb-key">Esc</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="tool-btn" id="btn-theme-toggle" title="ダーク/ライトモード切替">🌙</button>
+    </div>
+  </header>
+
+  <!-- Main Container with Sidebar and Reader -->
+  <div class="app-container">
+    <!-- Sidebar: Article List & Filters -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-search-box">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input" placeholder="記事を検索 (/ でフォーカス)..." />
+        </div>
+        <div class="filter-row">
+          <select id="category-filter" class="filter-select">
+            <option value="all">全カテゴリ</option>
+            <option value="Copilot">Copilot</option>
+            <option value="Models">Models</option>
+            <option value="Project & Issues">Project & Issues</option>
+            <option value="Actions">Actions</option>
+            <option value="Security">Security</option>
+            <option value="Administration & Enterprise">Admin & Enterprise</option>
+            <option value="Packages">Packages</option>
+            <option value="Client apps">Client apps</option>
+            <option value="Collaboration tools & Community engagement">Collaboration</option>
+            <option value="Miscellaneous">Miscellaneous</option>
+          </select>
+          <select id="status-filter" class="filter-select">
+            <option value="all">全ステータス</option>
+            <option value="translated">対訳あり</option>
+            <option value="untranslated">原文のみ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sidebar-stats">
+        <span id="filtered-count">87件中 87件表示</span>
+        <span id="translated-ratio">18件 対訳済</span>
+      </div>
+
+      <!-- Background Translation Queue Panel -->
+      <div class="sidebar-queue-box" id="sidebar-queue-box">
+        <button id="btn-batch-translate" class="btn-batch-translate" title="現在の表示期間の未翻訳記事をバックグラウンドで順次翻訳します">
+          <span class="batch-icon">⚡</span>
+          <span id="batch-translate-label">未翻訳を一括翻訳 (非同期)</span>
+        </button>
+        <div class="batch-options">
+          <label class="batch-option">
+            <span>順序</span>
+            <select id="batch-order" title="一括翻訳の処理順">
+              <option value="newest">新しい順</option>
+              <option value="oldest">古い順</option>
+            </select>
+          </label>
+          <label class="batch-option" title="翻訳送信前にセッションのモデルを Auto (efficiency) に切り替えます（セッション全体に適用）">
+            <input type="checkbox" id="use-auto-efficiency" checked>
+            <span>Auto (efficiency)</span>
+          </label>
+        </div>
+        <div id="queue-status-card" class="queue-status-card" style="display: none;">
+          <div class="queue-status-top">
+            <span class="queue-badge" id="queue-badge">🔄 順次翻訳中</span>
+            <span class="queue-counts" id="queue-counts">0 / 0</span>
+            <div class="queue-actions">
+              <button id="btn-queue-toggle-pause" class="btn-queue-ctrl" title="一時停止/再開">⏸️</button>
+              <button id="btn-queue-cancel" class="btn-queue-ctrl" title="キューを停止">⏹️</button>
+            </div>
+          </div>
+          <div class="queue-current-title" id="queue-current-title" title="">準備中...</div>
+          <div class="queue-progress-bar-bg">
+            <div class="queue-progress-bar-fill" id="queue-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <ul class="article-list" id="article-list">
+        <!-- Rendered dynamically -->
+      </ul>
+    </aside>
+
+    <!-- Main Reader View -->
+    <main class="main-view" id="main-view">
+      <!-- Article Header -->
+      <div class="article-header" id="article-header">
+        <div class="article-meta-bar">
+          <span class="badge badge-cat" id="art-category">Category</span>
+          <span class="badge badge-date" id="art-date">2026-09-30</span>
+          <span id="art-status-badge"></span>
+          <button class="btn-translate-action" id="btn-translate-header" title="AI対訳を生成 (ショートカット: T)">
+            <span class="translate-icon">🌐</span>
+            <span class="translate-label">日本語訳を生成</span>
+            <span class="kb-key" style="font-size: 0.7rem; padding: 1px 4px; border-color: rgba(255,255,255,0.3);">T</span>
+          </button>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="article-external-link" id="art-link">
+            <span>GitHub Blog で開く</span>
+            <span>↗</span>
+          </a>
+        </div>
+        <div class="title-container">
+          <h1 class="article-title-en" id="art-title-en">Loading...</h1>
+          <h2 class="article-title-ja" id="art-title-ja">読み込み中...</h2>
+        </div>
+      </div>
+
+      <!-- Column Headers (Fixed for Side-by-Side Mode) -->
+      <div class="column-headers" id="column-headers">
+        <div class="col-header">
+          <span>🇺🇸</span><span>Original English</span>
+        </div>
+        <div class="col-header">
+          <span>🇯🇵</span><span>日本語訳 (AI / 対訳)</span>
+        </div>
+      </div>
+
+      <!-- Article Body with Blocks -->
+      <div class="article-body-wrapper" id="article-body-wrapper">
+        <div id="untranslated-alert"></div>
+
+        <div id="blocks-container">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Keyboard Shortcuts Hint (Clickable) -->
+  <div class="kb-hints" id="kb-hints-bar" title="クリックでショートカット一覧を開く">
+    <span>記事: <span class="kb-key">H</span>/<span class="kb-key">L</span></span>
+    <span>段落: <span class="kb-key">J</span>/<span class="kb-key">K</span></span>
+    <span>翻訳: <span class="kb-key">T</span></span>
+    <span><span class="kb-key">1</span>-<span class="kb-key">4</span> モード</span>
+    <span><span class="kb-key">?</span> ヘルプ</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
