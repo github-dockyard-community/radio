@@ -145,6 +145,19 @@
           <span class="batch-icon">⚡</span>
           <span id="batch-translate-label">未翻訳を一括翻訳 (非同期)</span>
         </button>
+        <div class="batch-options">
+          <label class="batch-option">
+            <span>順序</span>
+            <select id="batch-order" title="一括翻訳の処理順">
+              <option value="newest">新しい順</option>
+              <option value="oldest">古い順</option>
+            </select>
+          </label>
+          <label class="batch-option" title="翻訳送信前にセッションのモデルを Auto (efficiency) に切り替えます（セッション全体に適用）">
+            <input type="checkbox" id="use-auto-efficiency" checked>
+            <span>Auto (efficiency)</span>
+          </label>
+        </div>
         <div id="queue-status-card" class="queue-status-card" style="display: none;">
           <div class="queue-status-top">
             <span class="queue-badge" id="queue-badge">🔄 順次翻訳中</span>

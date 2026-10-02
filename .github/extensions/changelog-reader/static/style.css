@@ -826,6 +826,32 @@ body {
   cursor: not-allowed;
 }
 
+.batch-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.batch-option {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.batch-option select {
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.25rem;
+}
+
 .queue-status-card {
   margin-top: 0.45rem;
   background: var(--bg-secondary);

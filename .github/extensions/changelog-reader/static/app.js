@@ -41,6 +41,12 @@ const mainView = document.getElementById('main-view');
 // Queue Elements
 const btnBatchTranslate = document.getElementById('btn-batch-translate');
 const batchTranslateLabel = document.getElementById('batch-translate-label');
+const batchOrderSelect = document.getElementById('batch-order');
+const useAutoEfficiencyCheckbox = document.getElementById('use-auto-efficiency');
+
+function getBatchOrder() {
+  return batchOrderSelect?.value === 'oldest' ? 'oldest' : 'newest';
+}
 const queueStatusCard = document.getElementById('queue-status-card');
 const queueBadge = document.getElementById('queue-badge');
 const queueCounts = document.getElementById('queue-counts');
@@ -642,11 +648,13 @@ async function enqueueBatchCurrentView() {
     return;
   }
 
-  const confirmMsg = `現在の期間に含まれる未翻訳記事 ${untranslated.length} 件を、バックグラウンドエージェントで1件ずつ順次翻訳しますか？\n（途中で別の記事を手動翻訳すると最優先で割り込みます）`;
+  const ordered = getBatchOrder() === 'oldest' ? [...untranslated].reverse() : untranslated;
+  const orderLabel = getBatchOrder() === 'oldest' ? '古い順' : '新しい順';
+  const confirmMsg = `現在の期間に含まれる未翻訳記事 ${untranslated.length} 件を、${orderLabel}に1件ずつ順次翻訳しますか？\n（途中で別の記事を手動翻訳すると最優先で割り込みます）`;
   if (!confirm(confirmMsg)) return;
 
   try {
-    const articleIds = untranslated.map(a => a.id);
+    const articleIds = ordered.map(a => a.id);
     const res = await fetch('/api/queue/enqueue-batch', {
       method: 'POST',
       headers: {
@@ -746,6 +754,27 @@ function setupEvents() {
   }
 
   // Queue Controls
+  if (batchOrderSelect) {
+    batchOrderSelect.value = localStorage.getItem('batchOrder') === 'oldest' ? 'oldest' : 'newest';
+    batchOrderSelect.onchange = () => localStorage.setItem('batchOrder', batchOrderSelect.value);
+  }
+  if (useAutoEfficiencyCheckbox) {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(s => { useAutoEfficiencyCheckbox.checked = s.useAutoEfficiency !== false; })
+      .catch(() => {});
+    useAutoEfficiencyCheckbox.onchange = async () => {
+      try {
+        await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+          body: JSON.stringify({ useAutoEfficiency: useAutoEfficiencyCheckbox.checked })
+        });
+      } catch (err) {
+        console.error('Failed to update settings:', err);
+      }
+    };
+  }
   if (btnBatchTranslate) {
     btnBatchTranslate.onclick = () => enqueueBatchCurrentView();
   }

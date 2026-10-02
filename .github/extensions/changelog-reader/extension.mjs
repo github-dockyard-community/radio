@@ -21,6 +21,17 @@ const legacyDataPath = join(__dirname, "..", "..", "..", "data", "changelog-2026
 const servers = new Map();
 let copilotSession = null;
 const pendingTranslations = new Map();
+const translationSettings = { useAutoEfficiency: true };
+
+// setModel is session-wide (no per-message model option), so this switches the shared session to Auto (efficiency).
+async function applyTranslationModel() {
+  if (!translationSettings.useAutoEfficiency || !copilotSession?.setModel) return;
+  try {
+    await copilotSession.setModel("auto", { autoTier: "efficiency" });
+  } catch (err) {
+    console.error("Failed to switch model to auto (efficiency):", err?.message || err);
+  }
+}
 
 function getMimeType(filePath) {
   if (filePath.endsWith(".html")) return "text/html; charset=utf-8";
@@ -118,6 +129,8 @@ Canvas「GitHub Changelog 対訳リーダー」から記事の翻訳リクエス
 
 【対象ブロック】
 ${JSON.stringify(blocksPayload, null, 2)}`;
+
+  await applyTranslationModel();
 
   // Send to active Copilot session with attached task data file
   await copilotSession.send({
@@ -422,6 +435,35 @@ async function startServer(instanceId) {
     if (pathname === "/api/queue/status" && req.method === "GET") {
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       res.end(JSON.stringify(queueManager.getStatus()));
+      return;
+    }
+
+    // API: GET /api/settings
+    if (pathname === "/api/settings" && req.method === "GET") {
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify(translationSettings));
+      return;
+    }
+
+    // API: POST /api/settings
+    if (pathname === "/api/settings" && req.method === "POST") {
+      const csrfHeader = req.headers["x-csrf-token"];
+      if (!csrfHeader || csrfHeader !== serverCsrfToken) {
+        res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Forbidden: invalid or missing CSRF token." }));
+        return;
+      }
+      try {
+        const body = await readRequestBody(req);
+        if (typeof body.useAutoEfficiency === "boolean") {
+          translationSettings.useAutoEfficiency = body.useAutoEfficiency;
+        }
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify(translationSettings));
+      } catch (err) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
       return;
     }
 
