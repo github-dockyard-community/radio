@@ -55,6 +55,17 @@ const queueProgressFill = document.getElementById('queue-progress-fill');
 const btnQueueTogglePause = document.getElementById('btn-queue-toggle-pause');
 const btnQueueCancel = document.getElementById('btn-queue-cancel');
 
+function setSidebarCollapsed(collapsed) {
+  sidebar.classList.toggle('collapsed', collapsed);
+  sidebar.inert = collapsed;
+  sidebar.setAttribute('aria-hidden', String(collapsed));
+  btnSidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+  const action = collapsed ? '表示' : '隠す';
+  btnSidebarToggle.textContent = '☰ 一覧';
+  btnSidebarToggle.title = `記事一覧を${action} (B)`;
+  btnSidebarToggle.setAttribute('aria-label', `記事一覧を${action}`);
+}
+
 /**
  * Period Filter Calculation
  * - 上旬（1〜15日）の場合: 前月15日以降 〜 現在
@@ -708,6 +719,8 @@ async function cancelQueue() {
 
 // Setup Event Listeners
 function setupEvents() {
+  setSidebarCollapsed(sidebar.classList.contains('collapsed'));
+
   // Navigation
   btnPrev.onclick = () => selectArticle(currentArticleIndex - 1);
   btnNext.onclick = () => selectArticle(currentArticleIndex + 1);
@@ -734,7 +747,7 @@ function setupEvents() {
 
   // Sidebar Toggle
   btnSidebarToggle.onclick = () => {
-    sidebar.classList.toggle('collapsed');
+    setSidebarCollapsed(!sidebar.classList.contains('collapsed'));
   };
 
   // Theme Toggle
@@ -825,8 +838,12 @@ function setupEvents() {
 
     const key = e.key;
 
+    // 記事一覧の表示 / 非表示
+    if (key === 'b' || key === 'B') {
+      setSidebarCollapsed(!sidebar.classList.contains('collapsed'));
+    }
     // 記事移動: 次の記事 (→ / l / d)
-    if (key === 'ArrowRight' || key === 'l' || key === 'L' || key === 'd' || key === 'D') {
+    else if (key === 'ArrowRight' || key === 'l' || key === 'L' || key === 'd' || key === 'D') {
       btnNext.click();
     }
     // 記事移動: 前の記事 (← / h / a)
