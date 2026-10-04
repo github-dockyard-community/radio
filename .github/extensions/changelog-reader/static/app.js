@@ -313,7 +313,7 @@ function setActiveBlock(index) {
   });
 
   if (activeBlockIndex >= 0 && rows[activeBlockIndex]) {
-    rows[activeBlockIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    rows[activeBlockIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 }
 
