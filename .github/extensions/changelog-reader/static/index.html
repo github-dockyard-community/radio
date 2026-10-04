@@ -44,7 +44,7 @@
       </div>
 
       <!-- Quick Tools -->
-      <button class="tool-btn" id="btn-sidebar-toggle" title="サイドバー開閉">☰ 一覧</button>
+      <button class="tool-btn" id="btn-sidebar-toggle" type="button" title="記事一覧を隠す (B)" aria-label="記事一覧を隠す" aria-controls="sidebar" aria-expanded="true">☰ 一覧</button>
       <div class="help-popover-wrapper">
         <button class="tool-btn icon-btn" id="btn-help-toggle" title="キーボードショートカット一覧 ( ? )" aria-label="ヘルプ">？</button>
         <div class="help-tooltip-card" id="help-tooltip-card">
@@ -52,6 +52,10 @@
             <span class="help-title">⌨️ キーボードショートカット</span>
           </div>
           <div class="help-shortcuts-grid">
+            <div class="shortcut-item">
+              <span class="shortcut-label">記事一覧の表示 / 非表示</span>
+              <span class="shortcut-keys"><span class="kb-key">B</span></span>
+            </div>
             <div class="shortcut-item">
               <span class="shortcut-label">次の記事</span>
               <span class="shortcut-keys"><span class="kb-key">L</span> / <span class="kb-key">D</span> / <span class="kb-key">→</span></span>
@@ -226,6 +230,7 @@
 
   <!-- Keyboard Shortcuts Hint (Clickable) -->
   <div class="kb-hints" id="kb-hints-bar" title="クリックでショートカット一覧を開く">
+    <span>一覧: <span class="kb-key">B</span></span>
     <span>記事: <span class="kb-key">H</span>/<span class="kb-key">L</span></span>
     <span>段落: <span class="kb-key">J</span>/<span class="kb-key">K</span></span>
     <span>翻訳: <span class="kb-key">T</span></span>
