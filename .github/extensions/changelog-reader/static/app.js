@@ -43,6 +43,10 @@ const btnBatchTranslate = document.getElementById('btn-batch-translate');
 const batchTranslateLabel = document.getElementById('batch-translate-label');
 const batchOrderSelect = document.getElementById('batch-order');
 const useAutoEfficiencyCheckbox = document.getElementById('use-auto-efficiency');
+const btnRefreshArticles = document.getElementById('btn-refresh-articles');
+const btnRefreshInfo = document.getElementById('btn-refresh-info');
+const refreshTooltip = document.getElementById('refresh-tooltip');
+const refreshStatus = document.getElementById('refresh-status');
 
 function getBatchOrder() {
   return batchOrderSelect?.value === 'oldest' ? 'oldest' : 'newest';
@@ -112,6 +116,40 @@ async function loadData() {
   applyPeriodFilter();
   if (filteredArticles.length > 0) {
     selectArticle(0);
+  }
+}
+
+async function refreshArticles() {
+  if (!btnRefreshArticles || !refreshStatus) return;
+
+  btnRefreshArticles.disabled = true;
+  refreshStatus.hidden = false;
+  refreshStatus.textContent = 'RSSから最新記事を取得しています…';
+  refreshStatus.classList.remove('refresh-error');
+
+  try {
+    const res = await fetch('/api/articles/refresh', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': getCsrfToken() }
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      throw new Error(result.error || `HTTP ${res.status}`);
+    }
+
+    const selectedId = filteredArticles[currentArticleIndex]?.id;
+    allArticles = result.articles;
+    allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
+    populateMonthSelector();
+    applyPeriodFilter(selectedId);
+
+    const updatedAt = new Date(result.updatedAt).toLocaleString('ja-JP');
+    refreshStatus.textContent = `更新しました: 新着 ${result.addedCount} 件 / 全 ${result.totalArticles} 件 (${updatedAt})。翻訳は未開始です。`;
+  } catch (err) {
+    refreshStatus.textContent = `更新に失敗しました: ${err.message}`;
+    refreshStatus.classList.add('refresh-error');
+  } finally {
+    btnRefreshArticles.disabled = false;
   }
 }
 
@@ -790,6 +828,25 @@ function setupEvents() {
   }
   if (btnBatchTranslate) {
     btnBatchTranslate.onclick = () => enqueueBatchCurrentView();
+  }
+  if (btnRefreshArticles) {
+    btnRefreshArticles.onclick = () => refreshArticles();
+  }
+  if (btnRefreshInfo && refreshTooltip) {
+    btnRefreshInfo.onclick = () => {
+      const isOpen = btnRefreshInfo.getAttribute('aria-expanded') === 'true';
+      btnRefreshInfo.setAttribute('aria-expanded', String(!isOpen));
+      btnRefreshInfo.parentElement.classList.toggle('is-open', !isOpen);
+      refreshTooltip.hidden = isOpen;
+    };
+    btnRefreshInfo.onkeydown = (event) => {
+      if (event.key === 'Escape') {
+        btnRefreshInfo.setAttribute('aria-expanded', 'false');
+        btnRefreshInfo.parentElement.classList.remove('is-open');
+        refreshTooltip.hidden = true;
+        btnRefreshInfo.blur();
+      }
+    };
   }
   if (btnQueueTogglePause) {
     btnQueueTogglePause.onclick = () => toggleQueuePause();

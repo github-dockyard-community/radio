@@ -144,6 +144,22 @@
       </div>
 
       <!-- Background Translation Queue Panel -->
+      <div class="sidebar-refresh-box">
+        <div class="refresh-control">
+          <button id="btn-refresh-articles" class="btn-refresh-articles" type="button">
+            ↻ 最新記事一覧を更新
+          </button>
+          <div class="refresh-info-wrapper">
+            <button id="btn-refresh-info" class="refresh-info-button" type="button" aria-label="記事一覧の更新について" aria-expanded="false" aria-controls="refresh-tooltip">
+              i
+            </button>
+            <div id="refresh-tooltip" class="refresh-tooltip" role="tooltip" hidden>
+              RSSから記事一覧を更新します。翻訳は自動では開始されません。
+            </div>
+          </div>
+        </div>
+        <div id="refresh-status" class="refresh-status" role="status" aria-live="polite" hidden></div>
+      </div>
       <div class="sidebar-queue-box" id="sidebar-queue-box">
         <button id="btn-batch-translate" class="btn-batch-translate" title="現在の表示期間の未翻訳記事をバックグラウンドで順次翻訳します">
           <span class="batch-icon">⚡</span>
