@@ -43,13 +43,15 @@ function getMimeType(filePath) {
 }
 
 function loadArticlesData() {
-  if (existsSync(dataPath)) {
-    return JSON.parse(readFileSync(dataPath, "utf8"));
+  const filePath = existsSync(dataPath) ? dataPath : existsSync(legacyDataPath) ? legacyDataPath : null;
+  if (!filePath) return [];
+  try {
+    const articles = JSON.parse(readFileSync(filePath, "utf8"));
+    if (!Array.isArray(articles)) throw new Error("記事一覧が配列ではありません。");
+    return articles;
+  } catch (err) {
+    throw new Error(`既存キャッシュを読み込めません (${filePath})。ファイルを確認してください。`, { cause: err });
   }
-  if (existsSync(legacyDataPath)) {
-    return JSON.parse(readFileSync(legacyDataPath, "utf8"));
-  }
-  return [];
 }
 
 function saveArticlesData(articles) {
@@ -410,10 +412,11 @@ async function startServer(instanceId) {
         return;
       }
 
-      const previousIds = new Set(loadArticlesData().map(article => article.id));
-      const refreshPromise = changelogRefreshPromise || fetchAndSaveChangelog({ throwOnError: true });
-      changelogRefreshPromise = refreshPromise;
+      let refreshPromise;
       try {
+        const previousIds = new Set(loadArticlesData().map(article => article.id));
+        refreshPromise = changelogRefreshPromise || fetchAndSaveChangelog();
+        changelogRefreshPromise = refreshPromise;
         const articles = await refreshPromise;
         const addedCount = articles.filter(article => !previousIds.has(article.id)).length;
         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -606,6 +609,12 @@ async function startServer(instanceId) {
         res.end(JSON.stringify({ error: err.message }));
         return;
       }
+    }
+
+    if (pathname.startsWith("/api/")) {
+      res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: "APIが見つかりません。拡張機能を再読み込みし、Canvasを開き直してください。" }));
+      return;
     }
 
     // Static files (with path traversal protection)

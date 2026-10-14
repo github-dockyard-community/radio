@@ -65,37 +65,59 @@ export function cleanHtmlToParagraphs(html) {
 }
 
 export function mergeChangelogArticles(existingArticles, refreshedArticles) {
-  const refreshedById = new Map(refreshedArticles.map(article => [article.id, article]));
+  const existingById = new Map(existingArticles.map(article => [article.id, article]));
+  const refreshedById = new Map(refreshedArticles.map(article => {
+    const existing = existingById.get(article.id);
+    const existingBlocks = new Map((existing?.blocks || []).map(block => [block.id, block]));
+    const titleJa = existing?.title === article.title ? existing.titleJa : '';
+    const blocks = article.blocks.map(block => {
+      const previous = existingBlocks.get(block.id);
+      return { ...block, ja: previous?.enText === block.enText ? previous.ja : '' };
+    });
+    return [article.id, {
+      ...article,
+      titleJa,
+      blocks,
+      translated: Boolean(existing?.translated && titleJa && blocks.every(block => block.ja))
+    }];
+  }));
   const existingIds = new Set(existingArticles.map(article => article.id));
   const merged = existingArticles.map(existing => refreshedById.get(existing.id) || existing);
 
   for (const article of refreshedArticles) {
     if (!existingIds.has(article.id)) {
-      merged.push(article);
+      merged.push(refreshedById.get(article.id));
     }
   }
 
   return merged;
 }
 
-export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, verbose = false, throwOnError = false } = {}) {
+function loadExistingArticles() {
   let existingArticles = [];
 
   if (fs.existsSync(dataPath)) {
     try {
       existingArticles = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-    } catch {
-      // Ignore parse errors on corrupted local cache
+    } catch (err) {
+      throw new Error(`既存キャッシュを読み込めません (${dataPath})。ファイルを確認してください。`, { cause: err });
     }
   } else if (fs.existsSync(legacyDataPath)) {
     try {
       existingArticles = JSON.parse(fs.readFileSync(legacyDataPath, 'utf8'));
-    } catch {
-      // Ignore
+    } catch (err) {
+      throw new Error(`既存キャッシュを読み込めません (${legacyDataPath})。ファイルを確認してください。`, { cause: err });
     }
   }
+  if (!Array.isArray(existingArticles)) {
+    throw new Error('既存キャッシュの記事一覧が不正です。更新を中止しました。');
+  }
 
-  const existingById = new Map(existingArticles.map(article => [article.id, article]));
+  return existingArticles;
+}
+
+export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, verbose = false } = {}) {
+  loadExistingArticles();
   const now = new Date();
   const stopDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
 
@@ -111,22 +133,27 @@ export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, ver
     try {
       res = await fetch(url);
     } catch (err) {
-      if (throwOnError) {
-        throw new Error(`Failed to fetch page ${page}: ${err.message}`, { cause: err });
-      }
-      if (verbose) console.error(`Failed to fetch page ${page}:`, err);
-      break;
+      throw new Error(`RSSの${page}ページ目を取得できません: ${err.message}`, { cause: err });
     }
 
     if (!res.ok) {
-      if (throwOnError && (page === 1 || res.status !== 404)) {
-        throw new Error(`Failed to fetch page ${page}: HTTP ${res.status}`);
-      }
-      break;
+      if (page > 1 && res.status === 404) break;
+      throw new Error(`RSSの${page}ページ目を取得できません: HTTP ${res.status}`);
     }
 
-    const xml = await res.text();
+    let xml;
+    try {
+      xml = await res.text();
+    } catch (err) {
+      throw new Error(`RSSの${page}ページ目の本文を読み込めません: ${err.message}`, { cause: err });
+    }
+    if (!/<rss\b[^>]*>[\s\S]*<channel\b[^>]*>[\s\S]*<\/channel>\s*<\/rss>\s*$/i.test(xml)) {
+      throw new Error(`RSSの${page}ページ目がRSS XMLではありません (HTTP ${res.status}, ${res.headers.get('content-type') || 'Content-Typeなし'})。`);
+    }
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    if ((xml.match(/<item\b/g) || []).length !== [...xml.matchAll(itemRegex)].length) {
+      throw new Error(`RSSの${page}ページ目の記事XMLが不正です。`);
+    }
     let match;
     let countOnPage = 0;
 
@@ -140,6 +167,9 @@ export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, ver
       const pubDateMatch = itemContent.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
       const pubDateStr = pubDateMatch ? pubDateMatch[1].trim() : '';
       const pubDate = new Date(pubDateStr);
+      if (!title || !link || !Number.isFinite(pubDate.getTime())) {
+        throw new Error(`RSSの${page}ページ目の記事にタイトル・リンク・有効な日付がありません。`);
+      }
 
       const encodedMatch = itemContent.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/);
       const html = encodedMatch ? encodedMatch[1].trim() : '';
@@ -151,54 +181,58 @@ export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, ver
       }
 
       const blocks = cleanHtmlToParagraphs(html);
+      if (blocks.length === 0) {
+        throw new Error(`RSSの${page}ページ目の記事本文が空または不正です。`);
+      }
       const mappedCat = mapCategory(categories, title);
       const slug = link.replace(/.*\/changelog\//, '').replace(/\/$/, '');
 
-      const existing = existingById.get(slug);
-      const existingBlocks = existing ? new Map((existing.blocks || []).map(b => [b.id, b])) : null;
-      const titleJa = existing && existing.title === title ? existing.titleJa : '';
       const articleBlocks = blocks.map((b, idx) => {
         const id = `b_${idx}`;
-        const previousBlock = existingBlocks?.get(id);
         return {
           id,
           tag: b.tag,
           en: b.enHtml,
           enText: b.enText,
-          ja: previousBlock?.enText === b.enText ? previousBlock.ja : ''
+          ja: ''
         };
       });
 
       refreshedArticles.push({
         id: slug,
         title,
-        titleJa,
+        titleJa: '',
         link,
         pubDate: pubDateStr,
         date: pubDate.toISOString().split('T')[0],
         yearMonth: pubDate.toISOString().substring(0, 7),
         categories,
         category: mappedCat,
-        translated: Boolean(existing?.translated && titleJa && articleBlocks.every(block => block.ja)),
+        translated: false,
         blocks: articleBlocks
       });
     }
 
     if (countOnPage === 0) {
-      if (throwOnError && page === 1) {
-        throw new Error("The Changelog RSS feed returned no articles.");
-      }
+      if (page === 1) throw new Error("RSSフィードに記事がありません。");
       break;
     }
     page++;
   }
 
-  const allArticles = mergeChangelogArticles(existingArticles, refreshedArticles);
+  // Translation saves may have completed while the RSS requests were in flight.
+  const allArticles = mergeChangelogArticles(loadExistingArticles(), refreshedArticles);
   if (refreshedArticles.length > 0) {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
-    fs.writeFileSync(dataPath, JSON.stringify(allArticles, null, 2), 'utf8');
+    const temporaryPath = `${dataPath}.tmp`;
+    try {
+      fs.writeFileSync(temporaryPath, JSON.stringify(allArticles, null, 2), 'utf8');
+      fs.renameSync(temporaryPath, dataPath);
+    } finally {
+      if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+    }
     if (verbose) {
       console.log(`Successfully fetched and saved ${allArticles.length} articles to ${dataPath}`);
     }
