@@ -132,9 +132,20 @@ async function refreshArticles() {
       method: 'POST',
       headers: { 'X-CSRF-Token': getCsrfToken() }
     });
-    const result = await res.json();
+    if (res.status === 404) {
+      throw new Error('更新APIが見つかりません (HTTP 404)。拡張機能を再読み込みし、Canvasを開き直してください。');
+    }
+    let result;
+    try {
+      result = await res.json();
+    } catch (err) {
+      throw new Error(`更新APIがJSON以外または不正なJSONを返しました (HTTP ${res.status}, ${res.headers.get('content-type') || 'Content-Typeなし'})。拡張機能を再読み込みし、Canvasを開き直してください。`, { cause: err });
+    }
     if (!res.ok) {
-      throw new Error(result.error || `HTTP ${res.status}`);
+      throw new Error(result?.error || `更新APIでHTTP ${res.status}が発生しました。`);
+    }
+    if (!result || !Array.isArray(result.articles)) {
+      throw new Error('更新APIの応答に記事一覧がありません。');
     }
 
     const selectedId = filteredArticles[currentArticleIndex]?.id;
