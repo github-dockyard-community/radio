@@ -20,6 +20,7 @@ const legacyDataPath = join(__dirname, "..", "..", "..", "data", "changelog-2026
 
 const servers = new Map();
 let copilotSession = null;
+let changelogRefreshPromise = null;
 const pendingTranslations = new Map();
 const translationSettings = { useAutoEfficiency: true };
 
@@ -397,6 +398,40 @@ async function startServer(instanceId) {
     if (req.method === "OPTIONS") {
       res.writeHead(405);
       res.end();
+      return;
+    }
+
+    // API: POST /api/articles/refresh
+    if (pathname === "/api/articles/refresh" && req.method === "POST") {
+      const csrfHeader = req.headers["x-csrf-token"];
+      if (!csrfHeader || csrfHeader !== serverCsrfToken) {
+        res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "Forbidden: invalid or missing CSRF token." }));
+        return;
+      }
+
+      const previousIds = new Set(loadArticlesData().map(article => article.id));
+      const refreshPromise = changelogRefreshPromise || fetchAndSaveChangelog({ throwOnError: true });
+      changelogRefreshPromise = refreshPromise;
+      try {
+        const articles = await refreshPromise;
+        const addedCount = articles.filter(article => !previousIds.has(article.id)).length;
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.end(JSON.stringify({
+          articles,
+          addedCount,
+          totalArticles: articles.length,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch (err) {
+        console.error("Failed to refresh changelog articles:", err);
+        res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: `記事一覧を更新できませんでした: ${err.message}` }));
+      } finally {
+        if (changelogRefreshPromise === refreshPromise) {
+          changelogRefreshPromise = null;
+        }
+      }
       return;
     }
 

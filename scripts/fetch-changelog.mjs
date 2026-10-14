@@ -64,43 +64,42 @@ export function cleanHtmlToParagraphs(html) {
   return blocks;
 }
 
-export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, verbose = false } = {}) {
-  const existingTranslations = {};
+export function mergeChangelogArticles(existingArticles, refreshedArticles) {
+  const refreshedById = new Map(refreshedArticles.map(article => [article.id, article]));
+  const existingIds = new Set(existingArticles.map(article => article.id));
+  const merged = existingArticles.map(existing => refreshedById.get(existing.id) || existing);
+
+  for (const article of refreshedArticles) {
+    if (!existingIds.has(article.id)) {
+      merged.push(article);
+    }
+  }
+
+  return merged;
+}
+
+export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, verbose = false, throwOnError = false } = {}) {
+  let existingArticles = [];
 
   if (fs.existsSync(dataPath)) {
     try {
-      const existingArticles = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-      for (const a of existingArticles) {
-        if (a.translated) {
-          existingTranslations[a.id] = {
-            titleJa: a.titleJa,
-            blocks: (a.blocks || []).map(b => ({ id: b.id, ja: b.ja }))
-          };
-        }
-      }
+      existingArticles = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
     } catch {
       // Ignore parse errors on corrupted local cache
     }
   } else if (fs.existsSync(legacyDataPath)) {
     try {
-      const existingArticles = JSON.parse(fs.readFileSync(legacyDataPath, 'utf8'));
-      for (const a of existingArticles) {
-        if (a.translated) {
-          existingTranslations[a.id] = {
-            titleJa: a.titleJa,
-            blocks: (a.blocks || []).map(b => ({ id: b.id, ja: b.ja }))
-          };
-        }
-      }
+      existingArticles = JSON.parse(fs.readFileSync(legacyDataPath, 'utf8'));
     } catch {
       // Ignore
     }
   }
 
+  const existingById = new Map(existingArticles.map(article => [article.id, article]));
   const now = new Date();
   const stopDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
 
-  const allArticles = [];
+  const refreshedArticles = [];
   let page = 1;
   let keepFetching = true;
 
@@ -112,11 +111,19 @@ export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, ver
     try {
       res = await fetch(url);
     } catch (err) {
+      if (throwOnError) {
+        throw new Error(`Failed to fetch page ${page}: ${err.message}`, { cause: err });
+      }
       if (verbose) console.error(`Failed to fetch page ${page}:`, err);
       break;
     }
 
-    if (!res.ok) break;
+    if (!res.ok) {
+      if (throwOnError && (page === 1 || res.status !== 404)) {
+        throw new Error(`Failed to fetch page ${page}: HTTP ${res.status}`);
+      }
+      break;
+    }
 
     const xml = await res.text();
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
@@ -147,36 +154,47 @@ export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, ver
       const mappedCat = mapCategory(categories, title);
       const slug = link.replace(/.*\/changelog\//, '').replace(/\/$/, '');
 
-      const existing = existingTranslations[slug];
-      const translated = !!existing;
-      const transMap = existing ? new Map(existing.blocks.map(b => [b.id, b.ja])) : null;
+      const existing = existingById.get(slug);
+      const existingBlocks = existing ? new Map((existing.blocks || []).map(b => [b.id, b])) : null;
+      const titleJa = existing && existing.title === title ? existing.titleJa : '';
+      const articleBlocks = blocks.map((b, idx) => {
+        const id = `b_${idx}`;
+        const previousBlock = existingBlocks?.get(id);
+        return {
+          id,
+          tag: b.tag,
+          en: b.enHtml,
+          enText: b.enText,
+          ja: previousBlock?.enText === b.enText ? previousBlock.ja : ''
+        };
+      });
 
-      allArticles.push({
+      refreshedArticles.push({
         id: slug,
         title,
-        titleJa: existing ? existing.titleJa : '',
+        titleJa,
         link,
         pubDate: pubDateStr,
         date: pubDate.toISOString().split('T')[0],
         yearMonth: pubDate.toISOString().substring(0, 7),
         categories,
         category: mappedCat,
-        translated,
-        blocks: blocks.map((b, idx) => ({
-          id: `b_${idx}`,
-          tag: b.tag,
-          en: b.enHtml,
-          enText: b.enText,
-          ja: (transMap && transMap.get(`b_${idx}`)) || ''
-        }))
+        translated: Boolean(existing?.translated && titleJa && articleBlocks.every(block => block.ja)),
+        blocks: articleBlocks
       });
     }
 
-    if (countOnPage === 0) break;
+    if (countOnPage === 0) {
+      if (throwOnError && page === 1) {
+        throw new Error("The Changelog RSS feed returned no articles.");
+      }
+      break;
+    }
     page++;
   }
 
-  if (allArticles.length > 0) {
+  const allArticles = mergeChangelogArticles(existingArticles, refreshedArticles);
+  if (refreshedArticles.length > 0) {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
