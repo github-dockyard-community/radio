@@ -4,6 +4,21 @@
 
 ---
 
+## GitHub Changelog Digest (GitHub Actions)
+
+`.github/workflows/github-changelog-digest.md` が RSS を取得し、対象期間のダイジェストを Discussions に作成・更新します。
+
+- RSS は `curl` で取得します。Copilot CLI のオフラインモードではネイティブの `web-fetch` は利用できません。
+- CLI の `engine.args` による `--allow-url github.blog` と、ファイアウォールの `network.allowed` による `github.blog` の許可は両方必要です。どちらも許可対象をこのホストに限定しています。
+- 取得・解析に失敗した場合は `missing_tool` / `missing_data` safe-output で詳細を報告し、Discussion は新規作成・更新しません。既存の記事一覧とリアクションを保持します。Actions の成功表示だけでなく、実行サマリーのエラー報告も確認してください。
+
+ワークフローを変更した際は、gh-aw CLI を更新してから lock ファイルを再生成し、ソースと一緒にコミットします。このワークフローの生成には **gh-aw v0.92.0** を使用しています。
+
+```sh
+gh extension upgrade githubnext/gh-aw
+gh aw compile github-changelog-digest
+```
+
 ## GitHub Changelog 対訳リーダー (Canvas 拡張機能)
 
 GitHub Changelog の最新記事を英語原文と日本語訳で左右並列に対訳表示し、快適に読み進めることができる Copilot Canvas 拡張機能です。

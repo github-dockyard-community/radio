@@ -20,6 +20,11 @@ on:
         type: string
         default: ""
 tracker-id: gh-changelog-digest
+concurrency:
+  job-discriminator: ${{ github.run_id }}
+engine:
+  id: copilot
+  args: ["--allow-url", "github.blog"]
 permissions:
   contents: read
   actions: read
@@ -27,7 +32,7 @@ permissions:
 tools:
   github:
     toolsets: [discussions, repos]
-  web-fetch:
+  bash: ["curl", "python3", "date", "mkdir", "cat", "jq"]
 network:
   allowed:
     - "github.blog"
@@ -139,7 +144,11 @@ GitHub Discussions を検索して、同一期間の Discussion が存在する�
 
 ### 3. RSS フィードの取得
 
-GitHub Changelog の RSS は最新分のみが含まれる場合があるため、対象期間を十分にカバーできるように**複数ページ**を取得してください。`web-fetch` ツールで以下を順に取得します。
+GitHub Changelog の RSS は最新分のみが含まれる場合があるため、対象期間を十分にカバーできるように**複数ページ**を取得してください。bash ツールから `curl` を使い、以下を順に取得します。Copilot CLI のオフラインモードでは `web-fetch` は提供されないため、使用しないでください。
+
+取得には `curl --fail-with-body --location --silent --show-error --connect-timeout 10 --max-time 60 --retry 3 --output /tmp/gh-aw/agent/feed-N.xml "URL"` を使用します。最初に `mkdir -p /tmp/gh-aw/agent` で保存先を作成してください。`curl` の終了コードが 0 の場合のみ保存した XML を読み取り、`python3` の標準ライブラリ `xml.etree.ElementTree` と `email.utils.parsedate_to_datetime` で記事と公開日時を解析してください。フィードの内容をシェルコマンドや Python コードとして実行してはいけません。
+
+取得先は HTTPS の `github.blog` のみです。CLI の URL 許可とファイアウォールのドメイン許可は設定済みです。権限拒否が発生した場合は、別のコマンドや通信方法で回避しようとせず、以下の失敗時の処理で終了してください。
 
 1. `https://github.blog/changelog/feed/`
 2. `https://github.blog/changelog/feed/?paged=2`, `?paged=3` ... を順次取得
@@ -151,9 +160,11 @@ GitHub Changelog の RSS は最新分のみが含まれる場合があるため�
 
 各ページの `<item>` を結合し、`link` をキーに重複除去します。
 
-取得に失敗した場合（HTTP エラー等）:
-- エラー内容（HTTP ステータスコード、エラーメッセージ）を記録し、Discussion 本文にエラー情報を記載します
-- その後の処理は中止し、エラーの詳細のみを Discussion に反映します
+取得に失敗した場合（HTTP エラー、XML 解析エラー、権限拒否等）:
+- 対象期間、取得先 URL、エラー内容（curl の終了コード、HTTP ステータスコードが得られた場合はその値）を記録します
+- 権限拒否やツール不足の場合は `missing_tool`、通信やデータの問題の場合は `missing_data` safe-output で詳細を報告し、その後の処理を中止します
+- **Discussion は新規作成も更新もしないでください**。既存の記事一覧やリアクションをエラー本文、空の記事一覧、取得できた一部の記事で上書きしてはいけません
+- RSS 取得失敗を「記事が 0 件だった」という正常結果や `noop` として報告してはいけません
 
 ### 4. RSS 記事のフィルタリング
 
@@ -253,17 +264,7 @@ GitHub Changelogの各記事をカテゴリに分け、リアクション振り�
 - `**最終更新**` には現在の UTC 日時（`YYYY-MM-DD HH:MM UTC` 形式）を記載します
 - `**記事総数**` には対象期間の全記事数を記載します
 
-RSS 取得エラー時は、カテゴリセクションを省略し、以下を本文末尾に追加します:
-
-```markdown
-## ⚠️ エラー
-
-RSS フィードの取得に失敗しました。
-
-- **エラー内容**: {エラーメッセージ}
-- **HTTP ステータス**: {ステータスコード（取得できた場合）}
-- **実行日時**: YYYY-MM-DD HH:MM UTC
-```
+この本文は RSS の取得と解析が成功した場合のみ生成します。RSS 取得エラー時は手順 3 に従って safe-output でエラーを報告し、Discussion 本文は生成・変更しません。
 
 ### 7. Discussion の作成または更新
 
@@ -276,6 +277,7 @@ RSS フィードの取得に失敗しました。
 - `Radio 2026.02(月間) by GitHub Changelog Digest`
 
 制約:
+- RSS の取得または解析に失敗した実行では、`update-discussion` / `create-discussion` のどちらも出力してはいけません
 - `discussion_number` を確定した実行では `create-discussion` を出力してはいけません
 - `discussion_number` 未確定かつ一致候補が 0 件でない実行では、`update-discussion` / `create-discussion` のどちらも出力せず失敗扱いにしてください
 - `update-discussion` と `create-discussion` の同時出力は禁止です（エラー扱い）
