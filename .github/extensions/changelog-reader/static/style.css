@@ -893,6 +893,298 @@ body {
   color: var(--color-danger, #f85149);
 }
 
+.sidebar-storage-box {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.sidebar-storage-box summary {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.storage-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.55rem;
+}
+
+.storage-settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.storage-settings-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.storage-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.storage-actions button {
+  flex: 1;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.storage-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.storage-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.storage-help,
+.storage-status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.storage-status.storage-error {
+  color: var(--color-danger, #f85149);
+}
+
+.storage-status {
+  white-space: pre-line;
+}
+
+#storage-comparison {
+  margin: auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  width: 48rem;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--bg-color);
+  color: var(--text-main);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 28%);
+  font: inherit;
+}
+
+#storage-comparison > * + * {
+  margin-top: 1.25rem;
+}
+
+#storage-comparison::backdrop {
+  background: rgb(0 0 0 / 38%);
+}
+
+.storage-dialog-eyebrow {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.storage-dialog-header h2 {
+  margin-top: 0.35rem;
+  color: var(--text-main);
+  font-size: 1.4rem;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+
+.storage-dialog-header p {
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.storage-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: 0.75rem;
+}
+
+.storage-comparison-grid section {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.storage-comparison-grid h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.storage-card-path {
+  margin-top: 0.65rem;
+  min-height: 3.8em;
+  font: 0.72rem/1.6 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.storage-file-state {
+  display: inline-block;
+  margin-top: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.storage-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0.9rem 0;
+}
+
+.storage-card-stats dt,
+.storage-card-period {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.storage-card-stats dd {
+  color: var(--text-main);
+  font-size: 1.65rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.storage-card-stats dd span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.storage-card-period {
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.storage-card-period span {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.storage-dialog-note {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.storage-choice-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.storage-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 120ms, background-color 120ms;
+}
+
+.storage-choice:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent);
+}
+
+.storage-choice:focus-visible,
+.storage-dialog-footer button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.storage-choice-icon {
+  color: var(--accent);
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.storage-choice strong,
+.storage-choice small {
+  display: block;
+}
+
+.storage-choice strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.storage-choice small {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+.storage-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.storage-dialog-footer button {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-more-articles {
+  margin: 0.75rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sidebar-search-box .storage-actions {
+  margin-top: 0.5rem;
+}
+
+.sidebar-search-box .storage-status {
+  margin-top: 0.35rem;
+}
+
 .sidebar-queue-box {
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border-color);
@@ -1038,4 +1330,12 @@ body {
   background: var(--accent);
   border-radius: 2px;
   transition: width 0.3s ease;
+}
+.storage-choice[hidden] {
+  display: none;
+}
+
+.storage-choice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -114,8 +114,13 @@
       <div class="sidebar-search-box">
         <div class="search-input-wrapper">
           <span class="search-icon">🔍</span>
-          <input type="text" id="search-input" class="search-input" placeholder="記事を検索 (/ でフォーカス)..." />
+          <input type="text" id="search-input" class="search-input" placeholder="本文・訳文を検索（Enterで実行）" />
         </div>
+        <div class="storage-actions">
+          <button id="btn-search" type="button">検索</button>
+          <button id="btn-cancel-search" type="button" hidden>検索を解除・中止</button>
+        </div>
+        <p id="search-status" class="storage-status" role="status" aria-live="polite"></p>
         <div class="filter-row">
           <select id="category-filter" class="filter-select">
             <option value="all">全カテゴリ</option>
@@ -160,6 +165,28 @@
         </div>
         <div id="refresh-status" class="refresh-status" role="status" aria-live="polite" hidden></div>
       </div>
+      <div class="sidebar-storage-box">
+        <details id="storage-settings-panel">
+          <summary>対訳データの保存先</summary>
+          <div class="storage-settings-form">
+            <label>
+              <span>既存ディレクトリの絶対パス</span>
+              <input id="storage-directory" type="text" autocomplete="off" spellcheck="false" placeholder="C:\Users\you\Documents\Changelog">
+            </label>
+            <div class="storage-actions">
+              <button id="btn-save-storage" type="button" disabled>保存先を比較</button>
+              <button id="btn-reload-storage" type="button">保存先から再読み込み</button>
+            </div>
+            <button id="btn-storage-recovery" type="button" hidden>未完了の切替を確認して記録を解除</button>
+            <button id="btn-storage-migrate" type="button" hidden>月別形式へ移行</button>
+            <button id="btn-storage-cancel-job" type="button" hidden>処理を中止</button>
+            <button id="btn-storage-recover-forward" type="button" hidden>未完了操作の残りを適用</button>
+            <button id="btn-storage-recover-rollback" type="button" hidden>未完了操作を元に戻す</button>
+            <p class="storage-help">このディレクトリ内の YYYY-MM.json に月別で保存します。Git、OneDrive 等での管理・同期はユーザーが行います。旧全件ファイルは明示的に移行できます。</p>
+            <div id="storage-status" class="storage-status" role="status" aria-live="polite" hidden></div>
+          </div>
+        </details>
+      </div>
       <div class="sidebar-queue-box" id="sidebar-queue-box">
         <button id="btn-batch-translate" class="btn-batch-translate" title="現在の表示期間の未翻訳記事をバックグラウンドで順次翻訳します">
           <span class="batch-icon">⚡</span>
@@ -197,6 +224,7 @@
       <ul class="article-list" id="article-list">
         <!-- Rendered dynamically -->
       </ul>
+      <button id="btn-more-articles" class="btn-more-articles" type="button" hidden>次の50件を表示</button>
     </aside>
 
     <!-- Main Reader View -->
@@ -254,6 +282,38 @@
     <span><span class="kb-key">?</span> ヘルプ</span>
   </div>
 
+  <dialog id="storage-comparison" aria-labelledby="storage-comparison-title" aria-describedby="storage-comparison-warning">
+    <header class="storage-dialog-header">
+      <span class="storage-dialog-eyebrow">対訳データの保存先</span>
+      <h2 id="storage-comparison-title">どちらのデータを使いますか？</h2>
+      <p>内容を見比べて、切替後に使うデータを選んでください。</p>
+    </header>
+    <div id="storage-comparison-details" class="storage-comparison-grid">
+      <section aria-labelledby="storage-current-heading">
+        <h3 id="storage-current-heading">現在使用中</h3>
+        <div id="storage-current-details"></div>
+      </section>
+      <section aria-labelledby="storage-destination-heading">
+        <h3 id="storage-destination-heading">変更先</h3>
+        <div id="storage-destination-details"></div>
+      </section>
+    </div>
+    <p id="storage-comparison-warning" class="storage-dialog-note">元の保存先はそのまま残ります。データの自動統合は行いません。日付範囲は収録した記事の期間です。</p>
+    <div class="storage-choice-list">
+      <button id="btn-storage-migrate-destination" class="storage-choice" type="button" hidden>変更先を月別形式へ移行・採用する（データを確認）</button>
+      <button id="btn-storage-use" class="storage-choice" type="button">
+        <span class="storage-choice-icon" aria-hidden="true">→</span>
+        <span><strong>変更先のデータを使う</strong><small>ファイルは書き換えず、そのまま切り替えます。</small></span>
+      </button>
+      <button id="btn-storage-overwrite" class="storage-choice" type="button">
+        <span class="storage-choice-icon" aria-hidden="true">↗</span>
+        <span><strong>現在のデータを変更先へコピー</strong><small>変更先を上書きして切り替えます。変更先だけの記事・訳は残りません。</small></span>
+      </button>
+    </div>
+    <div class="storage-dialog-footer">
+      <button id="btn-storage-cancel" type="button" autofocus>今は変更しない</button>
+    </div>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>
