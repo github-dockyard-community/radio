@@ -1,13 +1,12 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateArticles } from '../.github/extensions/changelog-reader/storage.mjs';
+import { MonthlyStorage } from '../.github/extensions/changelog-reader/monthly-storage.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const dataDir = path.join(rootDir, 'data');
-const dataPath = path.join(dataDir, 'changelog-all.json');
-const legacyDataPath = path.join(dataDir, 'changelog-2026-09.json');
 
 // Category mapping based on github-changelog-digest
 const CATEGORY_MAP = [
@@ -87,37 +86,18 @@ export function mergeChangelogArticles(existingArticles, refreshedArticles) {
   for (const article of refreshedArticles) {
     if (!existingIds.has(article.id)) {
       merged.push(refreshedById.get(article.id));
+      existingIds.add(article.id);
     }
   }
 
   return merged;
 }
 
-function loadExistingArticles() {
-  let existingArticles = [];
-
-  if (fs.existsSync(dataPath)) {
-    try {
-      existingArticles = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-    } catch (err) {
-      throw new Error(`既存キャッシュを読み込めません (${dataPath})。ファイルを確認してください。`, { cause: err });
-    }
-  } else if (fs.existsSync(legacyDataPath)) {
-    try {
-      existingArticles = JSON.parse(fs.readFileSync(legacyDataPath, 'utf8'));
-    } catch (err) {
-      throw new Error(`既存キャッシュを読み込めません (${legacyDataPath})。ファイルを確認してください。`, { cause: err });
-    }
-  }
-  if (!Array.isArray(existingArticles)) {
-    throw new Error('既存キャッシュの記事一覧が不正です。更新を中止しました。');
-  }
-
-  return existingArticles;
-}
-
-export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, verbose = false } = {}) {
-  loadExistingArticles();
+export async function fetchChangelogArticles({
+  monthsBack = 4,
+  maxPages = 30,
+  verbose = false
+} = {}) {
   const now = new Date();
   const stopDate = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
 
@@ -220,30 +200,36 @@ export async function fetchAndSaveChangelog({ monthsBack = 4, maxPages = 30, ver
     page++;
   }
 
-  // Translation saves may have completed while the RSS requests were in flight.
-  const allArticles = mergeChangelogArticles(loadExistingArticles(), refreshedArticles);
-  if (refreshedArticles.length > 0) {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const temporaryPath = `${dataPath}.tmp`;
-    try {
-      fs.writeFileSync(temporaryPath, JSON.stringify(allArticles, null, 2), 'utf8');
-      fs.renameSync(temporaryPath, dataPath);
-    } finally {
-      if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
-    }
-    if (verbose) {
-      console.log(`Successfully fetched and saved ${allArticles.length} articles to ${dataPath}`);
-    }
-  }
+  const unique = [...new Map(refreshedArticles.map(article => [article.id, article])).values()];
+  return validateArticles(unique);
+}
 
-  return allArticles;
+export async function fetchAndSaveChangelog({
+  dataDirectory = dataDir,
+  dataPath: targetDataPath,
+  legacyDataPath: targetLegacyDataPath,
+  ...options
+} = {}) {
+  if (targetDataPath || targetLegacyDataPath) throw new Error('単一ファイル指定は廃止しました。月別形式へ移行し dataDirectory を指定してください。');
+  // CLI does not use or change the reader's global preference.
+  const store = new MonthlyStorage({
+    settingsPath: null,
+    defaultDirectory: dataDirectory
+  });
+  await store.init();
+  store.assertReadable();
+  const refreshed = await fetchChangelogArticles(options);
+  store.mergeRefreshed(refreshed, mergeChangelogArticles);
+  return store.state();
 }
 
 // Direct execution CLI support
 if (process.argv[1] === __filename) {
-  fetchAndSaveChangelog({ verbose: true }).catch(err => {
+  const args = process.argv.slice(2);
+  if (args.length && (args[0] !== '--data-directory' || args.length !== 2)) {
+    throw new Error('Usage: node scripts\\fetch-changelog.mjs [--data-directory <absolute-directory>]');
+  }
+  fetchAndSaveChangelog({ verbose: true, ...(args.length ? { dataDirectory: args[1] } : {}) }).catch(err => {
     console.error('Error fetching changelog:', err);
     process.exit(1);
   });
