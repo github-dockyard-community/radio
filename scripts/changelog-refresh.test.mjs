@@ -397,6 +397,60 @@ test('UI detail races discard older selections and the body cache stays at three
   assert.equal(vm.runInContext('detailCache.size', h.context), 3);
 });
 
+test('UI data refresh keeps the selected article when it no longer matches the list filter', async () => {
+  const h = uiHarness(async () => new Response(JSON.stringify({
+    ...uiState({ dataRevision: 'next-rev', sequence: 1 }),
+    articles: [{ id: 'newest', title: 'Newest', titleJa: '' }],
+    total: 1, totalInPeriod: 1, translatedInPeriod: 0, nextCursor: null
+  })));
+  h.context.oldState = uiState({ dataRevision: 'old-rev' });
+  vm.runInContext(`
+    storageState = oldState;
+    filteredArticles = [{ id: 'selected', title: 'Selected', titleJa: '' }];
+    currentArticleIndex = 0;
+    currentArticleId = 'selected';
+  `, h.context);
+  h.context.input = uiState({ dataRevision: 'next-rev', sequence: 1 });
+
+  await vm.runInContext('applyStorageState(input, dataEpoch, ++dataRequestSequence)', h.context);
+
+  assert.equal(vm.runInContext('currentArticleId', h.context), 'selected');
+  assert.equal(vm.runInContext('currentArticleIndex', h.context), -1);
+  assert.equal(h.drawn.length, 0);
+});
+
+test('UI data refresh keeps loaded pages and re-renders the open article in place', async () => {
+  const requests = [];
+  const pages = { first: ['a0', 'a1'], second: ['a2', 'a3'] };
+  const summary = id => ({ id, title: id, titleJa: '' });
+  const h = uiHarness(async url => {
+    requests.push(url);
+    if (url.startsWith('/api/articles/')) {
+      return new Response(JSON.stringify({ ...uiState({ dataRevision: 'next-rev' }), article: { id: 'a3', translated: true } }));
+    }
+    const second = url.includes('cursor=c2');
+    return new Response(JSON.stringify({
+      ...uiState({ dataRevision: 'next-rev' }),
+      articles: (second ? pages.second : pages.first).map(summary),
+      total: 4, totalInPeriod: 4, translatedInPeriod: 1, nextCursor: second ? null : 'c2'
+    }));
+  });
+  h.context.oldState = uiState({ dataRevision: 'old-rev' });
+  h.context.articles = ['a0', 'a1', 'a2', 'a3'].map(summary);
+  vm.runInContext(`
+    storageState = oldState; filteredArticles = allArticles = articles;
+    currentArticleIndex = 3; currentArticleId = 'a3'; articleBodyWrapper.scrollTop = 120;
+  `, h.context);
+  h.context.input = uiState({ dataRevision: 'next-rev', sequence: 1 });
+
+  await vm.runInContext('applyStorageState(input, dataEpoch, ++dataRequestSequence)', h.context);
+
+  assert.equal(vm.runInContext('filteredArticles.length', h.context), 4);
+  assert.equal(vm.runInContext('currentArticleIndex', h.context), 3);
+  assert.equal(vm.runInContext('articleBodyWrapper.scrollTop', h.context), 120);
+  assert.deepEqual(h.drawn, [{ id: 'a3', translated: true }]);
+});
+
 test('UI search is explicit and refuses mutations before loading versioned state', async () => {
   const h = uiHarness();
   const source = fs.readFileSync(appFile, 'utf8');
