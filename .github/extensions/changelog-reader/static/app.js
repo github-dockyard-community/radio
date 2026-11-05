@@ -3,6 +3,7 @@ let allArticles = [];
 let periodArticles = [];
 let filteredArticles = [];
 let currentArticleIndex = 0;
+let currentArticleId = null;
 let currentMode = 'side'; // 'side' | 'interleaved' | 'ja' | 'en'
 let activeBlockIndex = -1; // -1 means no block selected
 let storageState = null;
@@ -134,7 +135,7 @@ async function applyStorageState(value, epoch, requestSequence) {
   const changed = generationChanged || storageState?.dataRevision !== value.dataRevision ||
     storageState?.initializationError !== value.initializationError ||
     storageState?.format !== value.format || Boolean(storageState?.progress) !== Boolean(value.progress);
-  const selectedId = generationChanged ? null : filteredArticles[currentArticleIndex]?.id;
+  const selectedId = generationChanged ? null : currentArticleId;
   storageState = value;
   if (storageDirectory && generationChanged) storageDirectory.value = value.dataDirectory;
   if (useAutoEfficiencyCheckbox && !useAutoEfficiencyCheckbox.disabled) useAutoEfficiencyCheckbox.checked = value.useAutoEfficiency;
@@ -183,6 +184,7 @@ async function applyStorageState(value, epoch, requestSequence) {
       isTranslating = false;
       currentManualTargetId = null;
       currentArticleIndex = 0;
+      currentArticleId = null;
       activeBlockIndex = -1;
       detailCache.clear();
       activeSearchId = null;
@@ -362,36 +364,62 @@ async function loadArticlePage(append = false, preserveArticleId = null) {
   const epoch = append ? listEpoch : ++listEpoch;
   const generation = storageState.storageGeneration;
   const revision = storageState.dataRevision;
-  const params = new URLSearchParams({
+  // A data refresh (preserveArticleId without append) re-reads as many pages as were already loaded.
+  const refreshing = !append && Boolean(preserveArticleId);
+  const keepCount = refreshing ? allArticles.length : 0;
+  const baseParams = new URLSearchParams({
     period: periodSelector?.value || 'recent',
     category: categoryFilter?.value || 'all', status: statusFilter?.value || 'all'
   });
-  if (append && nextArticleCursor) params.set('cursor', nextArticleCursor);
-  if (activeSearchId) params.set('searchId', activeSearchId);
+  if (activeSearchId) baseParams.set('searchId', activeSearchId);
   if (btnMoreArticles) btnMoreArticles.disabled = true;
   try {
-    const res = await fetch(`/api/articles?${params}`);
-    const value = await res.json();
-    if (!res.ok) throw new Error(value.error || `HTTP ${res.status}`);
-    requireVersion(value);
-    if (epoch !== listEpoch || generation !== storageState.storageGeneration ||
-        revision !== value.dataRevision || value.storageGeneration !== generation) return;
-    if (!Array.isArray(value.articles) || value.articles.some(article => Object.hasOwn(article, 'blocks'))) {
-      throw new Error('一覧APIが不正な要約を返しました。');
-    }
-    allArticles = append ? [...allArticles, ...value.articles] : value.articles;
+    let articles = append ? [...allArticles] : [];
+    let cursor = append ? nextArticleCursor : null;
+    let value;
+    do {
+      const params = new URLSearchParams(baseParams);
+      if (cursor) params.set('cursor', cursor);
+      const res = await fetch(`/api/articles?${params}`);
+      value = await res.json();
+      if (!res.ok) throw new Error(value.error || `HTTP ${res.status}`);
+      requireVersion(value);
+      if (epoch !== listEpoch || generation !== storageState.storageGeneration ||
+          revision !== value.dataRevision || value.storageGeneration !== generation) return;
+      if (!Array.isArray(value.articles) || value.articles.some(article => Object.hasOwn(article, 'blocks'))) {
+        throw new Error('一覧APIが不正な要約を返しました。');
+      }
+      articles = [...articles, ...value.articles];
+      cursor = value.nextCursor;
+    } while (refreshing && cursor && articles.length < keepCount);
+    allArticles = articles;
     filteredArticles = allArticles;
     periodArticles = allArticles;
     nextArticleCursor = value.nextCursor;
     listTotal = value.total;
     periodTotal = value.totalInPeriod;
     periodTranslated = value.translatedInPeriod;
+    const listScroll = articleList.scrollTop;
     renderSidebarList();
+    if (append || refreshing) articleList.scrollTop = listScroll;
     updateStats();
     if (btnMoreArticles) btnMoreArticles.hidden = !nextArticleCursor;
     if (filteredArticles.length) {
-      const selected = preserveArticleId ? filteredArticles.findIndex(article => article.id === preserveArticleId) : 0;
-      if (!append) await selectArticle(Math.max(0, selected));
+      if (!append) {
+        if (preserveArticleId) {
+          const selected = filteredArticles.findIndex(article => article.id === preserveArticleId);
+          if (selected >= 0) {
+            await selectArticle(selected, { keepPosition: true });
+          } else {
+            currentArticleIndex = -1;
+            navCounter.textContent = `— / ${listTotal}`;
+            btnPrev.disabled = true;
+            btnNext.disabled = false;
+          }
+        } else {
+          await selectArticle(0);
+        }
+      }
     } else renderEmptyState();
   } catch (error) {
     if (epoch !== listEpoch || generation !== storageState?.storageGeneration) return;
@@ -448,13 +476,15 @@ function renderSidebarList() {
 }
 
 // Select Article by Index in filtered list
-async function selectArticle(index) {
+// keepPosition: re-render the open article in place (no scrolling, no loading placeholder).
+async function selectArticle(index, { keepPosition = false } = {}) {
+  const scrollToArticle = !keepPosition;
   if (index >= filteredArticles.length && nextArticleCursor) {
-    const selected = filteredArticles[currentArticleIndex]?.id;
-    await loadArticlePage(true, selected);
+    await loadArticlePage(true, currentArticleId);
   }
   if (index < 0 || index >= filteredArticles.length) return;
   currentArticleIndex = index;
+  currentArticleId = filteredArticles[index].id;
 
   // Update sidebar active item
   const items = articleList.querySelectorAll('.article-list-item');
@@ -463,7 +493,7 @@ async function selectArticle(index) {
   });
 
   // Ensure sidebar item is in view
-  if (items[index]) {
+  if (scrollToArticle && items[index]) {
     items[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
@@ -476,9 +506,13 @@ async function selectArticle(index) {
   const epoch = ++detailEpoch;
   const generation = storageState.storageGeneration;
   const revision = storageState.dataRevision;
-  blocksContainer.textContent = '本文を読み込んでいます…';
-  artTitleEn.textContent = target.title;
-  artTitleJa.textContent = target.titleJa;
+  const savedScroll = articleBodyWrapper.scrollTop;
+  const savedBlock = activeBlockIndex;
+  if (!keepPosition) {
+    blocksContainer.textContent = '本文を読み込んでいます…';
+    artTitleEn.textContent = target.title;
+    artTitleJa.textContent = target.titleJa;
+  }
   try {
     const key = `${generation}:${revision}:${target.id}`;
     let article = detailCache.get(key);
@@ -497,11 +531,19 @@ async function selectArticle(index) {
     renderArticle(article);
   } catch (error) {
     if (epoch === detailEpoch) {
-      blocksContainer.textContent = `本文を読み込めませんでした: ${error.message}`;
+      if (!keepPosition) blocksContainer.textContent = `本文を読み込めませんでした: ${error.message}`;
       setStorageStatus(error.message, true);
     }
+    return;
   }
 
+  if (keepPosition) {
+    articleBodyWrapper.scrollTop = savedScroll;
+    const rows = blocksContainer.querySelectorAll('.bilingual-row');
+    activeBlockIndex = savedBlock < rows.length ? savedBlock : -1;
+    rows.forEach((row, idx) => row.classList.toggle('active-block', idx === activeBlockIndex));
+    return;
+  }
   // Scroll reader to top
   articleBodyWrapper.scrollTop = 0;
   setActiveBlock(-1);
@@ -1077,7 +1119,7 @@ function setupEvents() {
   };
   if (btnSearch) btnSearch.onclick = () => runSearch();
   if (btnCancelSearch) btnCancelSearch.onclick = () => cancelSearch();
-  if (btnMoreArticles) btnMoreArticles.onclick = () => loadArticlePage(true, filteredArticles[currentArticleIndex]?.id);
+  if (btnMoreArticles) btnMoreArticles.onclick = () => loadArticlePage(true, currentArticleId);
   categoryFilter.onchange = () => applyFilters();
   statusFilter.onchange = () => applyFilters();
 
